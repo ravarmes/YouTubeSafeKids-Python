@@ -1,0 +1,1 @@
+"""Endpoints específicos da API.""" 

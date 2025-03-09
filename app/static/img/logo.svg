@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500">
+  <defs>
+    <!-- Padrão de 4 divisões diagonais iguais com centro perfeito e cores finais -->
+    <pattern id="centeredDivisionPattern" patternUnits="userSpaceOnUse" width="461" height="393.6" patternTransform="scale(1)">
+      <!-- Usamos o centro exato do retângulo: (230.5, 196.8) -->
+      
+      <!-- Divisão 1: Superior (verde) -->
+      <polygon points="230.5,196.8 0,0 461,0" fill="#00c853"/>
+      
+      <!-- Divisão 2: Esquerda (azul) -->
+      <polygon points="230.5,196.8 0,0 0,393.6" fill="#2962ff"/>
+      
+      <!-- Divisão 3: Direita (laranja) -->
+      <polygon points="230.5,196.8 461,0 461,393.6" fill="#ff6d00"/>
+      
+      <!-- Divisão 4: Inferior (rosa) -->
+      <polygon points="230.5,196.8 0,393.6 461,393.6" fill="#e91e63"/>
+      
+      <!-- Triângulo play central em branco -->
+      <path d="M300.506,237.056l-126.06,60.123c-3.359,1.602-7.239-0.847-7.239-4.568V168.607 c0-3.774,3.982-6.22,7.348-4.514l126.06,63.881C304.363,229.873,304.298,235.248,300.506,237.056z" fill="white"/>
+    </pattern>
+    
+    <!-- Função para criar estrela -->
+    <path id="starPath" d="M0,-5 L1.5,-1.5 L5.5,-1.5 L2.5,1.5 L3.5,5.5 L0,3 L-3.5,5.5 L-2.5,1.5 L-5.5,-1.5 L-1.5,-1.5 Z" fill="#ffffff"/>
+  </defs>
+  
+  <!-- Logo YouTube com divisões exatamente centralizadas -->
+  <g transform="translate(70, 70)">
+    <!-- Base com divisões diagonais iguais -->
+    <path style="fill:url(#centeredDivisionPattern);" d="M365.257,67.393H95.744C42.866,67.393,0,110.259,0,163.137v134.728 c0,52.878,42.866,95.744,95.744,95.744h269.513c52.878,0,95.744-42.866,95.744-95.744V163.137 C461.001,110.259,418.135,67.393,365.257,67.393z" />
+    
+    <!-- Estrelas reposicionadas mais próximas às bordas -->
+    
+    <!-- 4 Estrelas na divisão superior (verde) - agora todas dentro da área verde e mais próximas entre si -->
+    <use href="#starPath" transform="translate(175, 95) scale(3.2)"/>
+    <use href="#starPath" transform="translate(285, 95) scale(3.2)"/>
+    
+    <!-- 2 Estrelas na divisão esquerda (azul) - mais próximas à borda -->
+    <use href="#starPath" transform="translate(70, 160) scale(3.2)"/>
+    <use href="#starPath" transform="translate(70, 270) scale(3.2)"/>
+    
+    <!-- 2 Estrelas na divisão direita (laranja) - mais próximas à borda -->
+    <use href="#starPath" transform="translate(390, 160) scale(3.2)"/>
+    <use href="#starPath" transform="translate(390, 270) scale(3.2)"/>
+    
+    <!-- 2 Estrelas na divisão inferior (rosa) - mais próximas à borda -->
+    <use href="#starPath" transform="translate(145, 350) scale(3.2)"/>
+    <use href="#starPath" transform="translate(190, 350) scale(3.2)"/>
+    <use href="#starPath" transform="translate(270, 350) scale(3.2)"/>
+    <use href="#starPath" transform="translate(315, 350) scale(3.2)"/>
+  </g>
+   
+</svg>
