@@ -1,0 +1,120 @@
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Estilos gerais */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-in-out;
+}
+
+/* Estilos dos cards de vídeo */
+.video-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.video-card:hover {
+    transform: translateY(-4px);
+}
+
+.video-card img {
+    transition: transform 0.3s ease-in-out;
+}
+
+.video-card:hover img {
+    transform: scale(1.05);
+}
+
+/* Estilos dos filtros */
+.filter-card {
+    transition: border-color 0.2s ease-in-out;
+}
+
+.filter-card:hover {
+    border-color: #2563eb; /* blue-600 */
+}
+
+/* Estilos do input de busca */
+#search-input:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); /* blue-600 com opacidade 0.2 */
+}
+
+/* Estilos dos botões */
+button {
+    transition: all 0.2s ease-in-out;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Estilos de loading */
+.loading {
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 2px solid #9333ea;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Estilos de notificação */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease-in-out;
+}
+
+.notification.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* Responsividade */
+@media (max-width: 640px) {
+    .filter-card {
+        margin-bottom: 1rem;
+    }
+    
+    .video-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+} 

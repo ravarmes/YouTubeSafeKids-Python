@@ -1,0 +1,156 @@
+============================================================
+RELATÓRIO GERAL DO CORPUS
+============================================================
+[INFO] Total de registros: 900
+[INFO] Quantidade de filmes diferentes: 126
+[INFO] Quantidade total de frases: 900
+
+[FILMES] Filmes no corpus:
+   -> cCPgKSnS5Ks: 15 frases sim
+   -> B-ad3jrUE1U: 15 frases
+   -> sOA89CKfHPw: 15 frases
+   -> fk3E74NwJqw: 15 frases
+   -> _87WRHejjHk: 1 frases
+   -> X1UGj7c_U8c: 2 frases
+   -> DpXRVwOv5dk: 1 frases
+   -> TOpXKkAOnAY: 1 frases
+   -> cF_R46_fns8: 1 frases
+   -> FgykXQnpxSQ: 1 frases
+   -> UypfRDDAH5w: 1 frases
+   -> 21uyIbRXkjo: 3 frases
+   -> TzNSKnCMH5o: 2 frases
+   -> Slxl40oOptk: 2 frases
+   -> xRt1a-TMxcI: 15 frases
+   -> rnqEzTwdY4U: 15 frases
+   -> NG9p6kyJZ1g: 15 frases
+   -> PaW1bx8Qins: 15 frases
+   -> DUGMReDRzSc: 15 frases
+   -> KxViXp6AieM: 15 frases
+   -> 5n2UYiXM0is: 16 frases
+   -> hNChtaWCRnE: 15 frases
+   -> hwBh_F485QQ: 2 frases
+   -> l_PWgXbmssw: 2 frases
+   -> gAPe4rBFOkw: 2 frases
+   -> FQBX9gupIdQ: 4 frases
+   -> Ru1E_HBL71c: 3 frases
+   -> f2xuaxJxUGc: 2 frases
+   -> Hfs5NbibJ3Q: 2 frases
+   -> QCF7EQeb3YA: 3 frases
+   -> PIIKwZZZCAo: 5 frases
+   -> D7soWUBO4qg: 1 frases
+   -> 2ztdVbaWHcE: 3 frases
+   -> jH6m4zOXnUU: 1 frases
+   -> Zn1cVSlef1Y: 15 frases
+   -> B6UQYXZFS6k: 15 frases
+   -> kdlCkpoS7lc: 15 frases
+   -> 0ktXcCe9psk: 15 frases
+   -> AAwhu9YV8RM: 15 frases
+   -> Y_jh-Ugpv30: 15 frases
+   -> P6ZNTrjmteM: 15 frases
+   -> v3AEtUr65qg: 15 frases
+   -> z_FhzNmsI8g: 15 frases
+   -> Lquvg-WfF_0: 15 frases
+   -> fPnpu68PToA: 15 frases
+   -> NpewGvMrr6o: 15 frases
+   -> Ryl-9GLKCdg: 15 frases
+   -> dHUAeQ-3E195EaK8: 1 frases
+   -> dHUAeQ-3E195EaK9: 1 frases
+   -> dHUAeQ-3E195EaK10: 1 frases
+   -> dHUAeQ-3E195EaK11: 1 frases
+   -> dHUAeQ-3E195EaK12: 1 frases
+   -> dHUAeQ-3E195EaK13: 1 frases
+   -> dHUAeQ-3E195EaK14: 1 frases
+   -> dHUAeQ-3E195EaK15: 1 frases
+   -> dHUAeQ-3E195EaK16: 1 frases
+   -> dHUAeQ-3E195EaK17: 1 frases
+   -> dHUAeQ-3E195EaK18: 1 frases
+   -> dHUAeQ-3E195EaK19: 1 frases
+   -> dHUAeQ-3E195EaK20: 1 frases
+   -> dHUAeQ-3E195EaK21: 1 frases
+   -> dHUAeQ-3E195EaK22: 1 frases
+   -> Yy4D7cf0z_s: 15 frases
+   -> lJWJvxRPQuw: 15 frases
+   -> A2gLOHf2glQ: 15 frases
+   -> rXXJtnytIO4: 15 frases
+   -> f-2lf-MXcEQ: 15 frases
+   -> 32mlN52ihg0: 15 frases
+   -> N84TDkRoG0o: 15 frases
+   -> NUd3u6LtP1o: 15 frases
+   -> w7sFkkvNF30: 15 frases
+   -> ocHOzZvdS1Y: 15 frases
+   -> l_fqx6CKXJg: 15 frases
+   -> K8N-mZ1mvhg: 15 frases
+   -> EjhNCl-97t0: 15 frases
+   -> EPEI4RMNB9w: 15 frases
+   -> H0Kx7IW7-Rc: 15 frases
+   -> v1KbZrsdj-E: 13 frases
+   -> rvA4urEKWfw: 1 frases
+   -> kgIjhLzvtkM: 2 frases
+   -> YE3SRhSHXes: 2 frases
+   -> 745ERQ23TLU: 5 frases
+   -> vJy5f4ojihw: 1 frases
+   -> YcjiTVMHIaM: 2 frases
+   -> D-3tpAFV0Qw: 2 frases
+   -> 2S0qCwdpW78: 11 frases
+   -> TU9_hfDb7D4: 4 frases
+   -> QzPLj7B71ck: 2 frases
+   -> iv6KY3Iwc4c: 2 frases
+   -> uYipZ9Hwi_4: 6 frases
+   -> ewkCk35Z1Sg: 5 frases
+   -> 1kUzcOey5N0: 2 frases
+   -> ec4Yi6NS18Y: 19 frases
+   -> CzXiftvsGX8: 2 frases
+   -> YQRFzJPULxI: 2 frases
+   -> uEs9tH5Z4Lg: 4 frases
+   -> J6tvZlxY8Pk: 1 frases
+   -> jMsK49rnzwg: 1 frases
+   -> JkFf7KQE_BE: 5 frases
+   -> ODMFdi0uvKE: 2 frases
+   -> kZgu6qewdMg: 7 frases
+   -> 0O50W7wsSf8: 2 frases
+   -> GEEFHofLH3s: 6 frases
+   -> XsNi8FEy5Ho: 1 frases
+   -> DTiDnj_gN9A: 1 frases
+   -> k0rqLVcaw60: 4 frases
+   -> 5lCSHYqagZ8: 1 frases
+   -> t15K8NF0tzw: 10 frases
+   -> 4UEASw-i4yg: 7 frases
+   -> #NOME?: 5 frases
+   -> vQvTJhGo26g: 3 frases
+   -> 2fBO74Ez0_Q: 7 frases
+   -> F8s1I10fRVg: 3 frases
+   -> MkJXCZFYI30: 8 frases
+   -> L9ODpjeZE9E: 4 frases
+   -> exzYzL-vBL0: 2 frases
+   -> ht3EF8VyktU: 1 frases
+   -> hsvqnr4r-3U: 8 frases
+   -> fn0vMWDYMV4: 13 frases
+   -> bsO13Rddz8s: 2 frases
+   -> _yGZR-r3nl0: 2 frases
+   -> 49j-f1x-NpU: 2 frases
+   -> L8aG7V11CHI: 5 frases
+   -> DCRL45UguFk: 14 frases
+   -> 9xki-DazaRE: 16 frases
+   -> k7sLBxSnQ88: 9 frases
+
+============================================================
+[PARTE] DISTRIBUIÇÃO POR PARTE DO VÍDEO
+----------------------------------------
+   Meio: 302 frases (33.6%)
+   Início: 300 frases (33.3%)
+   Fim: 298 frases (33.1%)
+
+[CATEGORIA] DISTRIBUIÇÃO POR CATEGORIA
+----------------------------------------
+   Li: 226 frases (25.1%)
+   Tox: 226 frases (25.1%)
+   Te: 225 frases (25.0%)
+   As: 223 frases (24.8%)
+
+[TOXICIDADE] DISTRIBUIÇÃO POR TOXICIDADE
+----------------------------------------
+   Não tóxico: 629 frases (69.9%)
+   Severo: 114 frases (12.7%)
+   Moderado: 104 frases (11.6%)
+   Leve: 53 frases (5.9%)
+

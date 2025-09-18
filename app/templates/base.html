@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}YouTube Safe Kids{% endblock %}</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-blue-700 flex items-center">
+                        <img src="{{ url_for('static', path='img/logo.svg') }}" alt="YouTube Safe Kids Logo" class="h-10 mr-3">
+                        YouTube Safe Kids
+                    </a>
+                </div>
+                <div class="flex items-center">
+                    <a href="#" class="text-gray-600 hover:text-purple-600 mx-4">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Sobre
+                    </a>
+                    <a href="#" class="text-gray-600 hover:text-purple-600">
+                        <i class="fas fa-question-circle mr-1"></i>
+                        Ajuda
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white shadow-md mt-12">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="text-gray-600">
+                    &copy; 2025 YouTube Safe Kids. Todos os direitos reservados.
+                </div>
+                <div class="flex items-center">
+                    <a href="#" class="text-gray-600 hover:text-purple-600 mx-2">
+                        <i class="fas fa-shield-alt"></i>
+                        Política de Privacidade
+                    </a>
+                    <a href="#" class="text-gray-600 hover:text-purple-600 mx-2">
+                        <i class="fas fa-file-contract"></i>
+                        Termos de Uso
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', path='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 
