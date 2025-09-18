@@ -2,7 +2,7 @@
 
 <h1 align="center">
     <img alt="RVM" src="https://github.com/ravarmes/YouTubeSafeKids-Python/blob/main/app/static/img/logo.jpg" />
-    <img alt="YouTubeSafeKids" src="https://github.com/ravarmes/YouTubeSafeKids-Python/blob/main/app/static/img/logo.svg" />
+    <img alt="YouTubeSafeKids" src="https://github.com/ravarmes/YouTubeSafeKids-Python/blob/main/app/static/img/logo.svg" width="100" height="100"/>
 </h1>
 
 <h3 align="center">
