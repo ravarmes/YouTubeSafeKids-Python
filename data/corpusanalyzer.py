@@ -1,16 +1,37 @@
 import pandas as pd
 import numpy as np
 from collections import Counter
-import matplotlib.pyplot as plt
-import seaborn as sns
+
+# Importações opcionais para visualização
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    VISUALIZATION_AVAILABLE = True
+except ImportError:
+    VISUALIZATION_AVAILABLE = False
+    print("[AVISO] Matplotlib e/ou Seaborn não estão instalados. Visualizações serão desabilitadas.")
 
 class CorpusAnalyzer:
     def __init__(self, csv_path):
         """
         Inicializa o analisador com o arquivo CSV
         """
-        self.df = pd.read_csv(csv_path, encoding='utf-8')
-        self.clean_data()
+        try:
+            # Tenta ler o CSV com diferentes separadores
+            try:
+                self.df = pd.read_csv(csv_path, encoding='utf-8', sep=';')
+            except:
+                self.df = pd.read_csv(csv_path, encoding='utf-8', sep=',')
+            
+            print(f"[INFO] Arquivo carregado com sucesso: {len(self.df)} registros")
+            print(f"[INFO] Colunas encontradas: {list(self.df.columns)}")
+            
+            self.clean_data()
+            
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Arquivo não encontrado: {csv_path}")
+        except Exception as e:
+            raise Exception(f"Erro ao carregar o arquivo CSV: {str(e)}")
         
     def clean_data(self):
         """
@@ -21,11 +42,9 @@ class CorpusAnalyzer:
             if self.df[col].dtype == 'object':
                 self.df[col] = self.df[col].astype(str).str.strip()
         
-        # Padroniza valores da coluna CATEGORIAS (se existir)
-        if 'CATEGORIAS' in self.df.columns:
-            self.df['CATEGORIAS'] = self.df['CATEGORIAS'].str.title()
-        elif 'CATEGORI' in self.df.columns:
-            self.df['CATEGORI'] = self.df['CATEGORI'].str.title()
+        # Padroniza valores da coluna CATEGORIA
+        if 'CATEGORIA' in self.df.columns:
+            self.df['CATEGORIA'] = self.df['CATEGORIA'].str.title()
             
     def relatorio_geral(self):
         """
@@ -155,6 +174,9 @@ class CorpusAnalyzer:
         """
         Gera gráficos para visualizar os dados
         """
+        if not VISUALIZATION_AVAILABLE:
+            print("[AVISO] Visualizações não disponíveis. Instale matplotlib e seaborn para habilitar.")
+            return
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
         fig.suptitle('Análise do Corpus - Classificação de Frases', fontsize=16)
         
@@ -229,26 +251,31 @@ def main():
     """
     import os
     
-    # Lista arquivos CSV disponíveis na pasta atual
-    csv_files = [f for f in os.listdir('.') if f.endswith('.csv')]
+    # Determina o caminho do arquivo CSV relativo à raiz do projeto
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)  # Sobe um nível para a raiz do projeto
+    csv_path = os.path.join(script_dir, 'corpus.csv')  # Arquivo está na mesma pasta do script
     
-    if csv_files:
-        print("Arquivos CSV encontrados:")
-        for i, file in enumerate(csv_files, 1):
-            print(f"  {i}. {file}")
+    # Verifica se o arquivo existe
+    if not os.path.exists(csv_path):
+        print(f"[ERRO] Arquivo corpus.csv não encontrado em: {csv_path}")
+        print(f"[INFO] Pasta do script: {script_dir}")
+        print(f"[INFO] Raiz do projeto: {project_root}")
         
-        if len(csv_files) == 1:
-            csv_path = csv_files[0]
-            print(f"\nUsando automaticamente: {csv_path}")
+        # Tenta encontrar o arquivo em outras localizações possíveis
+        alternative_paths = [
+            os.path.join(project_root, 'data', 'corpus.csv'),
+            os.path.join(project_root, 'corpus.csv'),
+            'corpus.csv'
+        ]
+        
+        for alt_path in alternative_paths:
+            if os.path.exists(alt_path):
+                csv_path = alt_path
+                print(f"[INFO] Arquivo encontrado em: {csv_path}")
+                break
         else:
-            try:
-                escolha = int(input("\nEscolha o número do arquivo CSV para analisar: ")) - 1
-                csv_path = csv_files[escolha]
-            except (ValueError, IndexError):
-                print("Escolha inválida! Usando o primeiro arquivo.")
-                csv_path = csv_files[0]
-    else:
-        csv_path = input("Digite o caminho completo do arquivo CSV: ")
+            csv_path = input("Digite o caminho completo do arquivo CSV: ")
     
     try:
         # Inicializa o analisador
@@ -261,14 +288,14 @@ def main():
         analyzer.relatorio_toxicidade()
         
         # Relatório cruzado - exemplo
-        analyzer.relatorio_cruzado('CATEGORI', 'PARTE')
+        analyzer.relatorio_cruzado('CATEGORIA', 'PARTE')
         
         # Filtros personalizados - exemplos
         print("EXEMPLOS DE FILTROS PERSONALIZADOS:")
         print("="*50)
         
         # Frases negativas do início
-        analyzer.filtrar_e_contar({'CATEGORI': 'Negativo', 'PARTE': 'Início'})
+        analyzer.filtrar_e_contar({'CATEGORIA': 'Negativo', 'PARTE': 'Início'})
         
         # Frases não tóxicas do meio
         analyzer.filtrar_e_contar({'TOX': 'Não tóxico', 'PARTE': 'Meio'})
