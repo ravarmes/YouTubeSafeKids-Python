@@ -1,0 +1,212 @@
+{
+  "experiment_name": "YouTubeSafeKids_BERTimbau_Experiments",
+  "description": "Configurações para experimentos com modelos BERTimbau do YouTubeSafeKids",
+  "version": "1.0.0",
+  
+  "models": {
+    "sentiment": {
+      "model_name": "neuralmind/bert-base-portuguese-cased",
+      "num_labels": 3,
+      "max_length": 512,
+      "learning_rate": 2e-5,
+      "batch_size": 16,
+      "epochs": 3,
+      "warmup_steps": 500,
+      "weight_decay": 0.01,
+      "dropout": 0.1,
+      "class_weights": "balanced"
+    },
+    "toxicity": {
+      "model_name": "neuralmind/bert-base-portuguese-cased",
+      "num_labels": 2,
+      "max_length": 512,
+      "learning_rate": 3e-5,
+      "batch_size": 16,
+      "epochs": 4,
+      "warmup_steps": 300,
+      "weight_decay": 0.01,
+      "dropout": 0.2,
+      "class_weights": "balanced"
+    },
+    "language": {
+      "model_name": "neuralmind/bert-base-portuguese-cased",
+      "num_labels": 2,
+      "max_length": 512,
+      "learning_rate": 2e-5,
+      "batch_size": 16,
+      "epochs": 3,
+      "warmup_steps": 400,
+      "weight_decay": 0.01,
+      "dropout": 0.15,
+      "class_weights": "balanced"
+    },
+    "educational": {
+      "model_name": "neuralmind/bert-base-portuguese-cased",
+      "num_labels": 2,
+      "max_length": 512,
+      "learning_rate": 2e-5,
+      "batch_size": 16,
+      "epochs": 3,
+      "warmup_steps": 500,
+      "weight_decay": 0.01,
+      "dropout": 0.1,
+      "class_weights": "balanced"
+    }
+  },
+  
+  "data": {
+    "preprocessing": {
+      "clean_text": true,
+      "remove_duplicates": true,
+      "min_length": 10,
+      "max_length": 512,
+      "balance_classes": true,
+      "balance_method": "undersample"
+    },
+    "split": {
+      "test_size": 0.2,
+      "validation_size": 0.1,
+      "stratify": true,
+      "random_seed": 42
+    },
+    "augmentation": {
+      "enabled": false,
+      "methods": ["synonym_replacement", "random_insertion"],
+      "augmentation_factor": 2
+    }
+  },
+  
+  "training": {
+    "device": "auto",
+    "mixed_precision": true,
+    "gradient_accumulation_steps": 1,
+    "max_grad_norm": 1.0,
+    "early_stopping": {
+      "enabled": true,
+      "patience": 3,
+      "min_delta": 0.001,
+      "monitor": "val_f1"
+    },
+    "scheduler": {
+      "type": "linear",
+      "warmup_ratio": 0.1
+    },
+    "optimizer": {
+      "type": "AdamW",
+      "betas": [0.9, 0.999],
+      "eps": 1e-8
+    },
+    "logging": {
+      "log_every": 100,
+      "eval_every": 500,
+      "save_every": 1000
+    }
+  },
+  
+  "evaluation": {
+    "metrics": ["accuracy", "precision", "recall", "f1", "auc"],
+    "batch_size": 32,
+    "save_predictions": true,
+    "confusion_matrix": true,
+    "classification_report": true
+  },
+  
+  "paths": {
+    "data_dir": "data",
+    "models_dir": "models",
+    "logs_dir": "logs",
+    "results_dir": "results",
+    "cache_dir": "cache"
+  },
+  
+  "experiments": {
+    "hyperparameter_search": {
+      "enabled": false,
+      "method": "grid_search",
+      "parameters": {
+        "learning_rate": [1e-5, 2e-5, 3e-5, 5e-5],
+        "batch_size": [8, 16, 32],
+        "epochs": [3, 4, 5],
+        "dropout": [0.1, 0.2, 0.3]
+      },
+      "cv_folds": 5,
+      "scoring": "f1_weighted"
+    },
+    "ablation_study": {
+      "enabled": false,
+      "components": ["dropout", "weight_decay", "warmup", "class_weights"]
+    },
+    "cross_validation": {
+      "enabled": false,
+      "folds": 5,
+      "stratified": true
+    }
+  },
+  
+  "comparison": {
+    "baseline_models": [
+      "random_classifier",
+      "majority_classifier",
+      "svm_tfidf",
+      "naive_bayes"
+    ],
+    "metrics_to_compare": ["accuracy", "f1_weighted", "precision_weighted", "recall_weighted"],
+    "statistical_tests": ["t_test", "wilcoxon"],
+    "significance_level": 0.05
+  },
+  
+  "deployment": {
+    "model_format": "pytorch",
+    "optimization": {
+      "quantization": false,
+      "pruning": false,
+      "distillation": false
+    },
+    "serving": {
+      "batch_size": 1,
+      "max_sequence_length": 512,
+      "timeout": 30
+    }
+  },
+  
+  "monitoring": {
+    "drift_detection": {
+      "enabled": true,
+      "threshold": 0.1,
+      "window_size": 1000
+    },
+    "performance_tracking": {
+      "enabled": true,
+      "metrics": ["accuracy", "latency", "throughput"],
+      "alert_thresholds": {
+        "accuracy_drop": 0.05,
+        "latency_increase": 2.0
+      }
+    }
+  },
+  
+  "reproducibility": {
+    "random_seed": 42,
+    "deterministic": true,
+    "benchmark": false
+  },
+  
+  "hardware": {
+    "gpu": {
+      "enabled": true,
+      "device_ids": [0],
+      "memory_fraction": 0.8
+    },
+    "cpu": {
+      "num_workers": 4,
+      "pin_memory": true
+    }
+  },
+  
+  "logging_config": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "handlers": ["console", "file"],
+    "file_path": "logs/experiment.log"
+  }
+}

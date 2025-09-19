@@ -1,82 +1,90 @@
-from transformers import pipeline
 from .base import BaseFilter
+from ..nlp.models.bertimbau_toxicity import BertimbauToxicity
 from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ToxicityFilter(BaseFilter):
     """
-    Filtro para detectar conteúdo tóxico usando BERTimbau.
+    Filtro de toxicidade usando modelo BERTimbau especializado.
     """
     
-    def __init__(self):
+    def __init__(self, model_path: str = None):
         super().__init__(
-            name="Toxicidade",
-            description="Filtra por conteúdo tóxico",
-            default_enabled=True
+            name="Filtro de Toxicidade",
+            description="Detecta conteúdo tóxico, ofensivo ou inadequado"
         )
-        self.classifier = pipeline("text-classification", model="neuralmind/bert-base-portuguese-cased")
+        
+        try:
+            self.model = BertimbauToxicity(model_path)
+            logger.info("Modelo BERTimbau de toxicidade carregado com sucesso")
+        except Exception as e:
+            logger.error(f"Erro ao carregar modelo de toxicidade: {e}")
+            self.model = None
         
     def process(self, video_data: Dict[str, Any]) -> float:
         """
-        Processa o vídeo e retorna uma pontuação entre 0 e 1.
-        0 = mais tóxico, 1 = menos tóxico
-        """
-        text = f"{video_data.get('title', '')} {video_data.get('description', '')} {video_data.get('transcript', '')}"
-        if not text.strip():
-            return 1.0
-            
-        # Divide o texto em chunks de no máximo 512 tokens
-        chunks = self._split_text(text)
+        Processa o vídeo para detectar toxicidade.
         
-        # Processa cada chunk
-        scores = []
-        for chunk in chunks:
-            try:
-                result = self.classifier(chunk)
-                # Inverte o score para que 1 seja o menos tóxico
-                score = 1 - result[0]['score'] if result[0]['label'] == 'TOXICO' else result[0]['score']
-                scores.append(score)
-            except Exception as e:
-                print(f"Erro ao processar chunk: {e}")
-                continue
-                
-        if not scores:
-            return 1.0
+        Args:
+            video_data: Dados do vídeo incluindo título, descrição e transcrição
             
-        # Retorna a média dos scores
-        return sum(scores) / len(scores)
-        
-    def _split_text(self, text: str, max_length: int = 512) -> list:
+        Returns:
+            float: Score de 0 a 1 (0 = muito tóxico, 1 = não tóxico)
         """
-        Divide o texto em chunks menores para processamento.
-        """
-        words = text.split()
-        chunks = []
-        current_chunk = []
+        if not self.model:
+            logger.warning("Modelo de toxicidade não disponível")
+            return 0.5  # Retorna neutro se modelo não estiver disponível
         
-        for word in words:
-            current_chunk.append(word)
-            if len(current_chunk) >= max_length:
-                chunks.append(' '.join(current_chunk))
-                current_chunk = []
-                
-        if current_chunk:
-            chunks.append(' '.join(current_chunk))
+        # Combina título, descrição e transcrição
+        text_parts = []
+        if video_data.get('title'):
+            text_parts.append(video_data['title'])
+        if video_data.get('description'):
+            text_parts.append(video_data['description'])
+        if video_data.get('transcript'):
+            text_parts.append(video_data['transcript'])
+        
+        if not text_parts:
+            return 1.0  # Se não há texto, considera não tóxico
+        
+        combined_text = ' '.join(text_parts)
+        
+        try:
+            # Usa o modelo para predizer toxicidade
+            result = self.model.predict_toxicity(combined_text)
             
-        return chunks
-
+            # Converte para score (0 = tóxico, 1 = não tóxico)
+            if result['class'] == 'TOXIC':
+                score = 1 - result['confidence']  # Inverte para que tóxico = baixo score
+            else:
+                score = result['confidence']  # Não tóxico = alto score
+            
+            return score
+            
+        except Exception as e:
+            logger.error(f"Erro ao processar toxicidade: {e}")
+            return 0.5  # Retorna neutro em caso de erro
+        
     def get_filter_info(self) -> Dict[str, Any]:
+        """
+        Retorna informações sobre o filtro de toxicidade.
+        """
         return {
             "name": self.name,
             "description": self.description,
             "enabled": self.enabled,
-            "type": "toxicity",
-            "default_value": 0,
+            "weight": self.weight,
+            "model_info": self.model.get_model_info() if self.model else "Modelo não carregado",
             "options": {
-                "toxicity_levels": [
-                    {"value": "all", "label": "Todos os níveis"},
-                    {"value": "low", "label": "Baixa toxicidade"},
-                    {"value": "medium", "label": "Toxicidade média"},
-                    {"value": "high", "label": "Alta toxicidade"}
-                ]
+                "toxicity_threshold": {
+                    "type": "slider",
+                    "min": 0.0,
+                    "max": 1.0,
+                    "default": 0.0,
+                    "step": 0.1,
+                    "description": "Limiar de toxicidade (0.0=muito restritivo, 1.0=pouco restritivo)"
+                }
             }
-        } 
+        }

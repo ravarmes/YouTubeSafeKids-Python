@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
+    
+    # Configuração de busca
+    MAX_SEARCH_RESULTS: int = 8
+    
+    # Configuração de transcrição
+    ENABLE_VIDEO_TRANSCRIPTION: bool = False
 
     # Configurações dos filtros
     FILTER_WEIGHTS: ClassVar[Dict[str, float]] = {
@@ -31,4 +37,4 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings():
-    return Settings() 
+    return Settings()

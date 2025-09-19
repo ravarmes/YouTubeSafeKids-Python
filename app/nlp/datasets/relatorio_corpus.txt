@@ -2,11 +2,11 @@
 RELATÓRIO GERAL DO CORPUS
 ============================================================
 [INFO] Total de registros: 900
-[INFO] Quantidade de filmes diferentes: 126
+[INFO] Quantidade de filmes diferentes: 112
 [INFO] Quantidade total de frases: 900
 
 [FILMES] Filmes no corpus:
-   -> cCPgKSnS5Ks: 15 frases sim
+   -> cCPgKSnS5Ks: 15 frases
    -> B-ad3jrUE1U: 15 frases
    -> sOA89CKfHPw: 15 frases
    -> fk3E74NwJqw: 15 frases
@@ -53,21 +53,7 @@ RELATÓRIO GERAL DO CORPUS
    -> fPnpu68PToA: 15 frases
    -> NpewGvMrr6o: 15 frases
    -> Ryl-9GLKCdg: 15 frases
-   -> dHUAeQ-3E195EaK8: 1 frases
-   -> dHUAeQ-3E195EaK9: 1 frases
-   -> dHUAeQ-3E195EaK10: 1 frases
-   -> dHUAeQ-3E195EaK11: 1 frases
-   -> dHUAeQ-3E195EaK12: 1 frases
-   -> dHUAeQ-3E195EaK13: 1 frases
-   -> dHUAeQ-3E195EaK14: 1 frases
-   -> dHUAeQ-3E195EaK15: 1 frases
-   -> dHUAeQ-3E195EaK16: 1 frases
-   -> dHUAeQ-3E195EaK17: 1 frases
-   -> dHUAeQ-3E195EaK18: 1 frases
-   -> dHUAeQ-3E195EaK19: 1 frases
-   -> dHUAeQ-3E195EaK20: 1 frases
-   -> dHUAeQ-3E195EaK21: 1 frases
-   -> dHUAeQ-3E195EaK22: 1 frases
+   -> dHUAeQ-3E195EaK8: 15 frases
    -> Yy4D7cf0z_s: 15 frases
    -> lJWJvxRPQuw: 15 frases
    -> A2gLOHf2glQ: 15 frases
@@ -136,9 +122,9 @@ RELATÓRIO GERAL DO CORPUS
 ============================================================
 [PARTE] DISTRIBUIÇÃO POR PARTE DO VÍDEO
 ----------------------------------------
-   Meio: 302 frases (33.6%)
+   Meio: 301 frases (33.4%)
    Início: 300 frases (33.3%)
-   Fim: 298 frases (33.1%)
+   Fim: 299 frases (33.2%)
 
 [CATEGORIA] DISTRIBUIÇÃO POR CATEGORIA
 ----------------------------------------
@@ -149,8 +135,8 @@ RELATÓRIO GERAL DO CORPUS
 
 [TOXICIDADE] DISTRIBUIÇÃO POR TOXICIDADE
 ----------------------------------------
-   Não tóxico: 629 frases (69.9%)
-   Severo: 114 frases (12.7%)
-   Moderado: 104 frases (11.6%)
-   Leve: 53 frases (5.9%)
+   0: 629 frases (69.9%)
+   3: 114 frases (12.7%)
+   2: 104 frases (11.6%)
+   1: 53 frases (5.9%)
 

@@ -1,13 +1,17 @@
 from typing import List, Dict, Any
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import *
 import httpx
 import isodate
 import logging
 import traceback
 import json
+import re
+from .config import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 class YouTubeAPI:
     def __init__(self, api_key: str):
@@ -15,19 +19,34 @@ class YouTubeAPI:
         self.api_key = api_key
         self.youtube = build('youtube', 'v3', developerKey=api_key)
         
-    async def search_videos(self, query: str, max_results: int = 20, video_duration: str = None) -> List[Dict[str, Any]]:
+    async def search_videos(self, query: str, max_results: int = None, video_duration: str = None, nlp_filters_enabled: List[str] = None) -> List[Dict[str, Any]]:
         logger.info("YouTubeAPI :: def search_videos")
         """
         Busca vídeos no YouTube Kids.
         
         Args:
             query: Termo de busca
-            max_results: Número máximo de resultados
+            max_results: Número máximo de resultados (padrão: configuração MAX_SEARCH_RESULTS)
             video_duration: Duração dos vídeos ('short', 'medium', 'long' ou None para todos)
+            nlp_filters_enabled: Lista de filtros de PLN habilitados
         
         Returns:
             List[Dict[str, Any]]: Lista de vídeos encontrados
         """
+        # Usa a configuração padrão se max_results não for especificado
+        if max_results is None:
+            max_results = settings.MAX_SEARCH_RESULTS
+            
+        # Lista de filtros de PLN que requerem transcrição
+        nlp_filter_names = ["Análise de Sentimentos", "Detecção de Toxicidade", "Classificação Educacional", "Detecção de Linguagem Imprópria"]
+        
+        # Verifica se algum filtro de PLN está habilitado
+        needs_transcription = False
+        if nlp_filters_enabled:
+            needs_transcription = any(filter_name in nlp_filters_enabled for filter_name in nlp_filter_names)
+            logger.info(f"Filtros de PLN habilitados: {nlp_filters_enabled}")
+            logger.info(f"Transcrição necessária: {needs_transcription}")
+            
         try:
             # Busca por vídeos sem adicionar "for kids" para aumentar resultados
             safe_query = query
@@ -103,6 +122,16 @@ class YouTubeAPI:
                         'like_count': int(item['statistics'].get('likeCount', 0)),
                         'comment_count': int(item['statistics'].get('commentCount', 0))
                     }
+                    
+                    # Obtém frases do vídeo se filtros de PLN estão habilitados
+                    if needs_transcription:
+                        logger.info(f"Obtendo frases para vídeo: {video_data['title']}")
+                        sentences = await self.get_video_sentences(item['id'])
+                        video_data['sentences'] = sentences
+                        logger.info(f"Frases obtidas: início='{sentences['start'][:50]}...', meio='{sentences['middle'][:50]}...', fim='{sentences['end'][:50]}...'")
+                    else:
+                        video_data['sentences'] = {"start": "", "middle": "", "end": ""}
+                    
                     videos.append(video_data)
                     logger.info(f"Processed video: '{video_data['title']}' - Duration: {duration} seconds")
                 except Exception as e:
@@ -173,4 +202,112 @@ class YouTubeAPI:
         except Exception as e:
             logger.error(f"Error getting video data for {video_id}: {str(e)}")
             logger.error(traceback.format_exc())
-            return {} 
+            return {}
+    
+    async def get_video_sentences(self, video_id: str) -> Dict[str, str]:
+        """
+        Extrai três frases de um vídeo (início, meio e fim) a partir da transcrição.
+        
+        Args:
+            video_id: ID do vídeo do YouTube
+            
+        Returns:
+            Dict[str, str]: Dicionário com as frases do início, meio e fim
+        """
+        logger.info(f"YouTubeAPI :: get_video_sentences for {video_id}")
+        
+        # Verifica se a transcrição está habilitada
+        if not settings.ENABLE_VIDEO_TRANSCRIPTION:
+            logger.info("Video transcription is disabled in settings")
+            return {"start": "", "middle": "", "end": ""}
+        
+        try:
+            # Tenta obter transcrições em português primeiro
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            
+            # Procura por transcrições em português
+            portuguese_transcripts = []
+            for transcript in transcript_list:
+                is_portuguese = (
+                    transcript.language_code.startswith('pt') or 
+                    'portuguese' in transcript.language.lower() or
+                    'português' in transcript.language.lower()
+                )
+                
+                if is_portuguese:
+                    portuguese_transcripts.append(transcript)
+            
+            if not portuguese_transcripts:
+                logger.warning(f"No Portuguese transcripts found for video {video_id}")
+                return {"start": "", "middle": "", "end": ""}
+            
+            # Escolhe a melhor transcrição (manual tem prioridade sobre auto-gerada)
+            best_transcript = None
+            for transcript in portuguese_transcripts:
+                if not transcript.is_generated:
+                    best_transcript = transcript
+                    logger.info(f"Using manual transcript: {transcript.language}")
+                    break
+            
+            if not best_transcript:
+                best_transcript = portuguese_transcripts[0]
+                logger.info(f"Using auto-generated transcript: {best_transcript.language}")
+            
+            # Baixa a transcrição
+            transcript_data = best_transcript.fetch()
+            
+            if not transcript_data:
+                logger.warning(f"Empty transcript data for video {video_id}")
+                return {"start": "", "middle": "", "end": ""}
+            
+            # Extrai frases do início, meio e fim
+            total_segments = len(transcript_data)
+            
+            # Início: primeiros 10% dos segmentos
+            start_end = max(1, total_segments // 10)
+            start_text = ' '.join(segment['text'] for segment in transcript_data[:start_end])
+            
+            # Meio: segmentos do meio (40% a 60%)
+            middle_start = int(total_segments * 0.4)
+            middle_end = int(total_segments * 0.6)
+            middle_text = ' '.join(segment['text'] for segment in transcript_data[middle_start:middle_end])
+            
+            # Fim: últimos 10% dos segmentos
+            end_start = max(0, total_segments - (total_segments // 10))
+            end_text = ' '.join(segment['text'] for segment in transcript_data[end_start:])
+            
+            # Limpa e extrai primeira frase de cada parte
+            def extract_first_sentence(text: str) -> str:
+                if not text:
+                    return ""
+                
+                # Remove quebras de linha e espaços extras
+                clean_text = re.sub(r'\s+', ' ', text.strip())
+                
+                # Procura por fim de frase (ponto, exclamação, interrogação)
+                sentence_end = re.search(r'[.!?]', clean_text)
+                if sentence_end:
+                    return clean_text[:sentence_end.end()].strip()
+                
+                # Se não encontrar fim de frase, pega até 100 caracteres
+                return clean_text[:100].strip() + ("..." if len(clean_text) > 100 else "")
+            
+            result = {
+                "start": extract_first_sentence(start_text),
+                "middle": extract_first_sentence(middle_text),
+                "end": extract_first_sentence(end_text)
+            }
+            
+            logger.info(f"Successfully extracted sentences for video {video_id}")
+            return result
+            
+        except NoTranscriptFound:
+            logger.warning(f"No transcript found for video {video_id}")
+            return {"start": "", "middle": "", "end": ""}
+        except VideoUnavailable:
+            logger.warning(f"Video {video_id} is unavailable")
+            return {"start": "", "middle": "", "end": ""}
+        except Exception as e:
+            logger.error(f"Error extracting sentences for video {video_id}: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {"start": "", "middle": "", "end": ""}
