@@ -39,4 +39,25 @@ ENV/
 
 # Local development
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Machine Learning Models and Cache
+app/nlp/models/cache/
+app/nlp/models/*/
+*.bin
+*.safetensors
+*.h5
+*.ckpt
+*.pth
+*.pt
+*.pkl
+*.joblib
+
+# Hugging Face Cache
+.cache/
+transformers_cache/
+huggingface_hub/
+
+# Large files (>100MB)
+*.model
+*.weights

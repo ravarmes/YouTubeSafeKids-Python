@@ -288,7 +288,7 @@ def main():
             'sentiment': 3,      # positivo, negativo, neutro
             'toxicity': 2,       # tóxico, não-tóxico
             'educational': 4,    # não-educacional, baixo, médio, alto
-            'language': 3        # apropriada, questionável, imprópria
+            'language': 3        # nenhuma, leve, severa
         }
         args.num_labels = task_labels[args.task]
     
@@ -333,4 +333,4 @@ def main():
     logger.info(f"Treinamento concluído. Modelo salvo em {model_output_dir}")
 
 if __name__ == "__main__":
-    main() 
+    main()

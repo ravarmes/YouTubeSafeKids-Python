@@ -143,6 +143,19 @@ O projeto está em desenvolvimento ativo, com atualizações frequentes incluind
 - Treinamento de modelos
 - Otimizações de interface
 
+### ⚠️ Importante para Desenvolvedores
+
+**Não commite modelos treinados ou arquivos de cache:**
+- Modelos treinados (`.bin`, `.pth`, `.h5`, etc.) são muito grandes (>100MB)
+- Cache do Hugging Face é automaticamente baixado quando necessário
+- O `.gitignore` já está configurado para ignorar estes arquivos
+- Se você acidentalmente commitou um arquivo grande, use `git filter-branch` para removê-lo do histórico
+
+**Arquivos ignorados automaticamente:**
+- `app/nlp/models/cache/` - Cache de modelos do Hugging Face
+- `*.bin`, `*.pth`, `*.h5` - Arquivos de modelos treinados
+- `venv/` - Ambiente virtual Python
+
 ## Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
