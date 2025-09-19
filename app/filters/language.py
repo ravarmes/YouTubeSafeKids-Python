@@ -7,12 +7,12 @@ logger = logging.getLogger(__name__)
 
 class LanguageFilter(BaseFilter):
     """
-    Filtro de linguagem imprópria usando modelo BERTimbau especializado.
+    Linguagem Imprópria usando modelo BERTimbau especializado.
     """
     
     def __init__(self, model_path: str = None):
         super().__init__(
-            name="Filtro de Linguagem",
+            name="Linguagem Imprópria",
             description="Detecta linguagem imprópria, palavrões e conteúdo inadequado"
         )
         
@@ -69,7 +69,7 @@ class LanguageFilter(BaseFilter):
         
     def get_filter_info(self) -> Dict[str, Any]:
         """
-        Retorna informações sobre o filtro de linguagem.
+        Retorna informações sobre o filtro de linguagem imprópria.
         """
         return {
             "name": self.name,

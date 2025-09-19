@@ -12,7 +12,7 @@ class ToxicityFilter(BaseFilter):
     
     def __init__(self, model_path: str = None):
         super().__init__(
-            name="Filtro de Toxicidade",
+            name="Toxicidade",
             description="Detecta conteúdo tóxico, ofensivo ou inadequado"
         )
         

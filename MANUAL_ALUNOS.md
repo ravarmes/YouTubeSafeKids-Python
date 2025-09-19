@@ -62,7 +62,7 @@ Crie um arquivo `.env` na raiz do projeto com as seguintes configurações:
 YOUTUBE_API_KEY=sua_chave_da_api_do_youtube_aqui
 
 # Search Configuration  
-MAX_SEARCH_RESULTS=50
+MAX_SEARCH_RESULTS=8
 
 # Transcription Configuration
 ENABLE_VIDEO_TRANSCRIPTION=True
@@ -76,7 +76,7 @@ ENABLE_VIDEO_TRANSCRIPTION=True
 
 ### 1.4 Verifique o Dataset
 - O dataset está em: `app/nlp/datasets/corpus.csv`
-- Contém colunas: `text`, `sentiment`, `toxicity`, `language`, `educational`
+- Contém colunas: `FRASE`, `AS`, `TOX`, `LI`, `TE`
 - Você usará apenas a coluna correspondente ao seu filtro
 
 ---
@@ -90,24 +90,24 @@ import pandas as pd
 # Carregue o dataset
 df = pd.read_csv('app/nlp/datasets/corpus.csv')
 
-# Para Análise de Sentimentos - use coluna 'sentiment'
-# Para Toxicidade - use coluna 'toxicity'  
-# Para Linguagem Imprópria - use coluna 'language'
-# Para Tópicos Educacionais - use coluna 'educational'
+# Para Análise de Sentimentos - use coluna 'AS'
+# Para Toxicidade - use coluna 'TOX'  
+# Para Linguagem Imprópria - use coluna 'LI'
+# Para Tópicos Educacionais - use coluna 'TE'
 
-# Exemplo para Sentiment:
+# Exemplo para Análise de Sentimentos:
 print("Distribuição das classes:")
-print(df['sentiment'].value_counts())
+print(df['AS'].value_counts())
 
 print("\nExemplos de textos:")
-print(df[['text', 'sentiment']].head())
+print(df[['FRASE', 'AS']].head())
 ```
 
 ### 2.2 Entenda as Classes
-- **Sentiment**: 0=Negativo, 1=Neutro, 2=Positivo
-- **Toxicity**: 0=Não Tóxico, 1=Levemente Tóxico, 2=Moderadamente Tóxico, 3=Altamente Tóxico
-- **Language**: 0=Nenhuma, 1=Leve, 2=Severa
-- **Educational**: 0=Não Educacional, 1=Parcialmente Educacional, 2=Educacional
+- **Análise de Sentimento**: 0=Negativo, 1=Neutro, 2=Positivo
+- **Toxicidade**: 0=Não Tóxico, 1=Levemente Tóxico, 2=Moderadamente Tóxico, 3=Altamente Tóxico
+- **Linguagem Imprópria**: 0=Nenhuma, 1=Leve, 2=Severa
+- **Tópicos Educacionais**: 0=Não Educacional, 1=Parcialmente Educacional, 2=Educacional
 
 ---
 
@@ -242,7 +242,147 @@ if __name__ == "__main__":
     main()
 ```
 
-### 5.2 Execute o Treinamento
+### 5.2 Otimização de Hiperparâmetros (Opcional mas Recomendado)
+
+Para obter os melhores resultados, é recomendável otimizar os hiperparâmetros do seu modelo. O projeto já oferece configurações pré-definidas (`default`, `fast`, `extensive`), mas você pode criar suas próprias configurações ou usar técnicas de busca automática.
+
+#### 5.2.1 Configurações Disponíveis
+O arquivo `app/nlp/config.py` já possui três configurações de treinamento:
+- **`default`**: Configuração balanceada (3 épocas, lr=5e-5, batch_size=16)
+- **`fast`**: Treinamento rápido para testes (1 época, batch_size=32)
+- **`extensive`**: Treinamento mais longo e cuidadoso (5 épocas, lr=2e-5, batch_size=8)
+
+#### 5.2.2 Técnicas de Otimização
+
+**A. Grid Search Manual**
+Crie um script para testar diferentes combinações:
+
+```python
+# hyperparameter_search_[SEU_FILTRO].py
+from app.nlp.models.bertimbau_[SEU_FILTRO] import Bertimbau[SeuFiltro]
+from app.nlp.datasets.prepare_data_[SEU_FILTRO] import prepare_data
+
+def grid_search():
+    # Parâmetros para testar
+    learning_rates = [2e-5, 3e-5, 5e-5]
+    batch_sizes = [8, 16, 32]
+    epochs = [3, 4, 5]
+    
+    best_f1 = 0
+    best_params = {}
+    
+    # Prepara dados uma vez
+    train_texts, train_labels, val_texts, val_labels, _, _ = prepare_data()
+    
+    for lr in learning_rates:
+        for batch_size in batch_sizes:
+            for epoch in epochs:
+                print(f"Testando: lr={lr}, batch={batch_size}, epochs={epoch}")
+                
+                # Cria configuração customizada
+                custom_config = {
+                    'num_train_epochs': epoch,
+                    'per_device_train_batch_size': batch_size,
+                    'learning_rate': lr,
+                    # ... outros parâmetros padrão
+                }
+                
+                # Treina modelo
+                model = Bertimbau[SeuFiltro]()
+                results = model.train_model(
+                    train_texts, train_labels, val_texts, val_labels,
+                    config_name='custom',  # Você precisará implementar isso
+                    experiment_name=f'grid_search_lr{lr}_bs{batch_size}_ep{epoch}'
+                )
+                
+                # Avalia resultado
+                f1_score = results['final_metrics']['eval_f1']
+                if f1_score > best_f1:
+                    best_f1 = f1_score
+                    best_params = {'lr': lr, 'batch_size': batch_size, 'epochs': epoch}
+    
+    print(f"Melhores parâmetros: {best_params} (F1: {best_f1:.4f})")
+```
+
+**B. Usando Optuna (Recomendado)**
+Para busca mais eficiente, instale e use o Optuna:
+
+```bash
+pip install optuna
+```
+
+```python
+# optuna_search_[SEU_FILTRO].py
+import optuna
+from app.nlp.models.bertimbau_[SEU_FILTRO] import Bertimbau[SeuFiltro]
+
+def objective(trial):
+    # Sugere hiperparâmetros
+    lr = trial.suggest_float('learning_rate', 1e-5, 1e-4, log=True)
+    batch_size = trial.suggest_categorical('batch_size', [8, 16, 32])
+    epochs = trial.suggest_int('epochs', 2, 6)
+    warmup_steps = trial.suggest_int('warmup_steps', 100, 1000)
+    
+    # Treina modelo com parâmetros sugeridos
+    model = Bertimbau[SeuFiltro]()
+    results = model.train_model(
+        train_texts, train_labels, val_texts, val_labels,
+        config_name='custom',
+        experiment_name=f'optuna_trial_{trial.number}'
+    )
+    
+    # Retorna métrica a ser otimizada
+    return results['final_metrics']['eval_f1']
+
+# Executa otimização
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=20)
+
+print(f"Melhores parâmetros: {study.best_params}")
+print(f"Melhor F1-Score: {study.best_value:.4f}")
+```
+
+**C. Usando Scikit-Optimize**
+Alternativa ao Optuna:
+
+```bash
+pip install scikit-optimize
+```
+
+```python
+from skopt import gp_minimize
+from skopt.space import Real, Integer, Categorical
+
+# Define espaço de busca
+space = [
+    Real(1e-5, 1e-4, name='learning_rate', prior='log-uniform'),
+    Categorical([8, 16, 32], name='batch_size'),
+    Integer(2, 6, name='epochs'),
+    Integer(100, 1000, name='warmup_steps')
+]
+
+def objective(params):
+    lr, batch_size, epochs, warmup_steps = params
+    # ... código de treinamento similar ao Optuna
+    return -f1_score  # Negativo porque gp_minimize minimiza
+
+result = gp_minimize(objective, space, n_calls=20, random_state=42)
+```
+
+#### 5.2.3 Bibliotecas Recomendadas
+- **Optuna**: Otimização bayesiana moderna e eficiente
+- **Scikit-Optimize**: Alternativa robusta com diferentes algoritmos
+- **Ray Tune**: Para otimização distribuída (projetos maiores)
+- **Hyperopt**: Biblioteca clássica para otimização de hiperparâmetros
+
+#### 5.2.4 Dicas Importantes
+- **Comece simples**: Teste primeiro com grid search manual em poucos parâmetros
+- **Use validação cruzada**: Se o dataset for pequeno
+- **Monitore overfitting**: Acompanhe métricas de treino vs validação
+- **Considere tempo**: Otimização pode ser demorada, use configuração `fast` para testes iniciais
+- **Documente resultados**: Mantenha registro dos experimentos realizados
+
+### 5.3 Execute o Treinamento
 ```bash
 cd app/nlp/training
 python train_[SEU_FILTRO].py

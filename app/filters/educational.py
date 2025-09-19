@@ -12,7 +12,7 @@ class EducationalFilter(BaseFilter):
     
     def __init__(self, model_path: str = None):
         super().__init__(
-            name="Filtro Educacional",
+            name="Tópicos Educacionais",
             description="Identifica e avalia conteúdo educacional e adequação por idade"
         )
         

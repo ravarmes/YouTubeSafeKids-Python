@@ -116,6 +116,48 @@
                         <span class="font-bold text-blue-600">Alegre</span>
                     </div>
                 </div>
+                {% elif filter.name == 'Tópicos Educacionais' %}
+                <div class="mt-2">
+                    <input type="range" 
+                           class="filter-range w-full disabled-range"
+                           data-filter="{{ filter.name }}"
+                           min="0"
+                           max="100"
+                           value="100"
+                           disabled>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Mínimo</span>
+                        <span class="font-bold text-blue-600">Máximo</span>
+                    </div>
+                </div>
+                {% elif filter.name == 'Toxicidade' %}
+                <div class="mt-2">
+                    <input type="range" 
+                           class="filter-range w-full disabled-range"
+                           data-filter="{{ filter.name }}"
+                           min="0"
+                           max="100"
+                           value="0"
+                           disabled>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span class="font-bold text-blue-600">Mínimo</span>
+                        <span>Máximo</span>
+                    </div>
+                </div>
+                {% elif filter.name == 'Linguagem Imprópria' %}
+                <div class="mt-2">
+                    <input type="range" 
+                           class="filter-range w-full disabled-range"
+                           data-filter="{{ filter.name }}"
+                           min="0"
+                           max="100"
+                           value="0"
+                           disabled>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span class="font-bold text-blue-600">Mínimo</span>
+                        <span>Máximo</span>
+                    </div>
+                </div>
                 {% else %}
                 <div class="mt-2">
                     <input type="range" 
@@ -135,7 +177,7 @@
                         {% else %}
                         <span>Mínimo</span>
                         <span>Máximo</span>
-                        <span class="absolute left-1/2 transform -translate-x-1/2 font-bold text-blue-600">{{ filter.default_value }}%</span>
+                        <span class="absolute left-1/2 transform -translate-x-1/2 font-bold text-blue-600">{{ filter.default_value }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -275,4 +317,4 @@
         const searchManager = new SearchManager();
     });
 </script>
-{% endblock %} 
+{% endblock %}
