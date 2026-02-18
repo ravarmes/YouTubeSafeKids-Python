@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 import os
-from typing import Dict, ClassVar
+from typing import Dict, List, ClassVar
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,10 +13,10 @@ class Settings(BaseSettings):
     YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
     
     # Configuração de busca
-    MAX_SEARCH_RESULTS: int = 8
+    MAX_SEARCH_RESULTS: int = 4
     
     # Configuração de transcrição
-    ENABLE_VIDEO_TRANSCRIPTION: bool = False
+    ENABLE_VIDEO_TRANSCRIPTION: bool = True
 
     # Configurações dos filtros
     FILTER_WEIGHTS: ClassVar[Dict[str, float]] = {
@@ -31,6 +31,11 @@ class Settings(BaseSettings):
         "diversity": 1.0,
         "sensitive": 1.0
     }
+
+    # Filtros que requerem transcrição de vídeo
+    NLP_FILTER_NAMES: ClassVar[List[str]] = [
+        "Sentimento", "Toxicidade", "Tópicos Educacionais", "Linguagem Imprópria"
+    ]
 
     class Config:
         case_sensitive = True

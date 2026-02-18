@@ -1,0 +1,156 @@
+{
+  "timestamp": "20260217_163505",
+  "methodology": {
+    "features": "TF-IDF (unigrams + bigrams, max_features=10000, sublinear_tf=True)",
+    "cv_folds": 5,
+    "random_state": 42,
+    "corpus_total": 2998,
+    "train_size": 2398,
+    "test_size": 600
+  },
+  "cross_validation_results": {
+    "SVM (LinearSVC)": {
+      "f1_mean": 0.6476448295583823,
+      "f1_std": 0.020747776798123754,
+      "accuracy_mean": 0.7235064370215728,
+      "accuracy_std": 0.015310135929609255,
+      "precision_mean": 0.6652388605485424,
+      "precision_std": 0.02023696572497065,
+      "recall_mean": 0.6435130623579186,
+      "recall_std": 0.019900156118791208
+    },
+    "Logistic Regression": {
+      "f1_mean": 0.6483341495448094,
+      "f1_std": 0.027821852653403794,
+      "accuracy_mean": 0.7239265831593598,
+      "accuracy_std": 0.020161846260034325,
+      "precision_mean": 0.6568598804119582,
+      "precision_std": 0.02853433487878667,
+      "recall_mean": 0.6464250835963926,
+      "recall_std": 0.026078276763196673
+    },
+    "Random Forest": {
+      "f1_mean": 0.6324722422152571,
+      "f1_std": 0.02480158140842824,
+      "accuracy_mean": 0.6922286012526097,
+      "accuracy_std": 0.024231304155414746,
+      "precision_mean": 0.6357200952823205,
+      "precision_std": 0.027563399632800963,
+      "recall_mean": 0.6343352319181226,
+      "recall_std": 0.024763154072990023
+    },
+    "Naive Bayes": {
+      "f1_mean": 0.5678017392764223,
+      "f1_std": 0.02203006805082282,
+      "accuracy_mean": 0.6705497564370215,
+      "accuracy_std": 0.011897951331856123,
+      "precision_mean": 0.6470321934754595,
+      "precision_std": 0.024703220669937673,
+      "recall_mean": 0.5636182466824686,
+      "recall_std": 0.017142787131999515
+    }
+  },
+  "test_results": {
+    "SVM (LinearSVC)": {
+      "f1": 0.6657564021429679,
+      "accuracy": 0.7333333333333333,
+      "precision": 0.6849069403920498,
+      "recall": 0.6589576744856248,
+      "confusion_matrix": [
+        [
+          287,
+          6,
+          6
+        ],
+        [
+          30,
+          77,
+          47
+        ],
+        [
+          36,
+          35,
+          76
+        ]
+      ],
+      "classification_report": "              precision    recall  f1-score   support\n\n     Nenhuma       0.81      0.96      0.88       299\n        Leve       0.65      0.50      0.57       154\n      Severa       0.59      0.52      0.55       147\n\n    accuracy                           0.73       600\n   macro avg       0.68      0.66      0.67       600\nweighted avg       0.72      0.73      0.72       600\n"
+    },
+    "Logistic Regression": {
+      "f1": 0.6780935712132065,
+      "accuracy": 0.7416666666666667,
+      "precision": 0.6892749681766439,
+      "recall": 0.6728261386646479,
+      "confusion_matrix": [
+        [
+          284,
+          7,
+          8
+        ],
+        [
+          24,
+          86,
+          44
+        ],
+        [
+          30,
+          42,
+          75
+        ]
+      ],
+      "classification_report": "              precision    recall  f1-score   support\n\n     Nenhuma       0.84      0.95      0.89       299\n        Leve       0.64      0.56      0.60       154\n      Severa       0.59      0.51      0.55       147\n\n    accuracy                           0.74       600\n   macro avg       0.69      0.67      0.68       600\nweighted avg       0.73      0.74      0.73       600\n"
+    },
+    "Random Forest": {
+      "f1": 0.636784572825182,
+      "accuracy": 0.69,
+      "precision": 0.6379702109154164,
+      "recall": 0.6380413926997778,
+      "confusion_matrix": [
+        [
+          254,
+          23,
+          22
+        ],
+        [
+          14,
+          77,
+          63
+        ],
+        [
+          24,
+          40,
+          83
+        ]
+      ],
+      "classification_report": "              precision    recall  f1-score   support\n\n     Nenhuma       0.87      0.85      0.86       299\n        Leve       0.55      0.50      0.52       154\n      Severa       0.49      0.56      0.53       147\n\n    accuracy                           0.69       600\n   macro avg       0.64      0.64      0.64       600\nweighted avg       0.70      0.69      0.69       600\n"
+    },
+    "Naive Bayes": {
+      "f1": 0.6018690685859386,
+      "accuracy": 0.6933333333333334,
+      "precision": 0.6737842334588863,
+      "recall": 0.5925582354153783,
+      "confusion_matrix": [
+        [
+          299,
+          0,
+          0
+        ],
+        [
+          59,
+          59,
+          36
+        ],
+        [
+          63,
+          26,
+          58
+        ]
+      ],
+      "classification_report": "              precision    recall  f1-score   support\n\n     Nenhuma       0.71      1.00      0.83       299\n        Leve       0.69      0.38      0.49       154\n      Severa       0.62      0.39      0.48       147\n\n    accuracy                           0.69       600\n   macro avg       0.67      0.59      0.60       600\nweighted avg       0.68      0.69      0.66       600\n"
+    }
+  },
+  "bertimbau_reference": {
+    "cv_f1_mean": 0.8031,
+    "cv_f1_std": 0.015,
+    "cv_accuracy_mean": 0.8036
+  }
+}

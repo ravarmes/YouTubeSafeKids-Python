@@ -80,16 +80,12 @@ class BertimbauBase:
         """Inicializa modelo base BERTimbau."""
         model_name = self.model_config['base_model']
         cache_dir = self.model_config.get('cache_dir')
-        
-        self.tokenizer = BertTokenizer.from_pretrained(
-            model_name,
-            cache_dir=cache_dir
-        )
-        self.model = BertForSequenceClassification.from_pretrained(
-            model_name,
-            num_labels=self.num_labels,
-            cache_dir=cache_dir
-        )
+        try:
+            self.tokenizer = BertTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
+            self.model = BertForSequenceClassification.from_pretrained(model_name, num_labels=self.num_labels, cache_dir=cache_dir)
+        except Exception:
+            self.tokenizer = BertTokenizer.from_pretrained(model_name)
+            self.model = BertForSequenceClassification.from_pretrained(model_name, num_labels=self.num_labels)
         
         self.model.to(self.device)
         

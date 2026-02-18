@@ -5,11 +5,10 @@ Script de avaliação para modelos BERTimbau do YouTubeSafeKids.
 Este script permite avaliar qualquer um dos 4 modelos específicos usando
 métricas apropriadas para cada tipo de tarefa.
 
-Uso:
-    python evaluate_model.py --model sentiment --data data/test_sentiment.csv --model-path models/sentiment
-    python evaluate_model.py --model toxicity --data data/test_toxicity.csv --model-path models/toxicity
-    python evaluate_model.py --model language --data data/test_language.csv --model-path models/language
-    python evaluate_model.py --model educational --data data/test_educational.csv --model-path models/educational
+VERSÃO CORRIGIDA:
+- Fix do erro KeyError: 'class' -> 'predicted_class'
+- Salva o texto original no CSV de predições
+- Exibe relatório detalhado por classe no console
 """
 
 import argparse
@@ -98,27 +97,18 @@ def parse_arguments():
     return parser.parse_args()
 
 def load_test_data(data_path: str, model_type: str) -> pd.DataFrame:
-    """
-    Carrega dados de teste baseado no tipo de modelo.
-    
-    Args:
-        data_path: Caminho para o arquivo de dados
-        model_type: Tipo do modelo
-        
-    Returns:
-        pd.DataFrame: Dados de teste carregados
-    """
+    """Carrega dados de teste baseado no tipo de modelo."""
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Arquivo de dados não encontrado: {data_path}")
     
     df = pd.read_csv(data_path)
     
-    # Validar colunas necessárias baseado no tipo de modelo
+    # Validar colunas necessárias
     required_columns = {
         'sentiment': ['text', 'label'],
         'toxicity': ['text', 'label'],
         'language': ['text', 'label'],
-        'educational': ['text', 'label']  # pode incluir 'age_group', 'topic'
+        'educational': ['text', 'label']
     }
     
     missing_columns = set(required_columns[model_type]) - set(df.columns)
@@ -134,31 +124,56 @@ def evaluate_sentiment_model(model, test_data: pd.DataFrame) -> dict:
     
     predictions = []
     true_labels = []
+    texts = [] # Novo: Guardar textos
+    confidences = [] # Novo: Guardar confiança
+    
+    # Mapeamento para relatório bonito (ajuste se seus labels forem diferentes)
+    target_names = ['Negativo', 'Neutro', 'Positivo']
     
     for _, row in test_data.iterrows():
         try:
             result = model.predict_sentiment(row['text'])
-            predictions.append(result['class'])
+            
+            # --- FIX: Usar predicted_class ---
+            pred_class = result.get('predicted_class', result.get('class'))
+            predictions.append(pred_class)
             true_labels.append(row['label'])
+            texts.append(row['text'])
+            confidences.append(result.get('confidence', 0.0))
+            
         except Exception as e:
             logger.warning(f"Erro ao processar amostra: {e}")
             continue
     
     # Calcular métricas
     accuracy = accuracy_score(true_labels, predictions)
-    precision = precision_score(true_labels, predictions, average='weighted')
-    recall = recall_score(true_labels, predictions, average='weighted')
-    f1 = f1_score(true_labels, predictions, average='weighted')
+    precision = precision_score(true_labels, predictions, average='weighted', zero_division=0)
+    recall = recall_score(true_labels, predictions, average='weighted', zero_division=0)
+    f1 = f1_score(true_labels, predictions, average='weighted', zero_division=0)
+    f1_macro = f1_score(true_labels, predictions, average='macro', zero_division=0)
+    
+    # Relatório formatado para o console
+    cls_report_str = classification_report(true_labels, predictions, target_names=target_names, digits=4, zero_division=0)
+    cls_report_dict = classification_report(true_labels, predictions, target_names=target_names, output_dict=True, zero_division=0)
+    
+    print("\n" + "="*60)
+    print("RELATÓRIO DETALHADO POR CLASSE (SENTIMENTO)")
+    print("="*60)
+    print(cls_report_str)
+    print("="*60 + "\n")
     
     return {
         'accuracy': accuracy,
         'precision': precision,
         'recall': recall,
         'f1_score': f1,
-        'classification_report': classification_report(true_labels, predictions),
+        'f1_score_macro': f1_macro,
+        'classification_report': cls_report_dict,
         'confusion_matrix': confusion_matrix(true_labels, predictions).tolist(),
-        'predictions': predictions if len(predictions) > 0 else [],
-        'true_labels': true_labels
+        'predictions': predictions,
+        'true_labels': true_labels,
+        'texts': texts,
+        'confidences': confidences
     }
 
 def evaluate_toxicity_model(model, test_data: pd.DataFrame) -> dict:
@@ -168,28 +183,32 @@ def evaluate_toxicity_model(model, test_data: pd.DataFrame) -> dict:
     predictions = []
     confidences = []
     true_labels = []
+    texts = []
     
     for _, row in test_data.iterrows():
         try:
             result = model.predict_toxicity(row['text'])
-            predictions.append(result['class'])
+            # --- FIX: Usar predicted_class ---
+            pred_class = result.get('predicted_class', result.get('class'))
+            
+            predictions.append(pred_class)
             confidences.append(result['confidence'])
             true_labels.append(row['label'])
+            texts.append(row['text'])
         except Exception as e:
             logger.warning(f"Erro ao processar amostra: {e}")
             continue
     
     # Calcular métricas
     accuracy = accuracy_score(true_labels, predictions)
-    precision = precision_score(true_labels, predictions, average='binary', pos_label='TOXIC')
-    recall = recall_score(true_labels, predictions, average='binary', pos_label='TOXIC')
-    f1 = f1_score(true_labels, predictions, average='binary', pos_label='TOXIC')
+    precision = precision_score(true_labels, predictions, average='binary', pos_label='TOXIC', zero_division=0)
+    recall = recall_score(true_labels, predictions, average='binary', pos_label='TOXIC', zero_division=0)
+    f1 = f1_score(true_labels, predictions, average='binary', pos_label='TOXIC', zero_division=0)
     
-    # AUC-ROC se possível
     auc_roc = None
     try:
-        # Converter labels para binário
         y_true_binary = [1 if label == 'TOXIC' else 0 for label in true_labels]
+        # Ajuste simples para probabilidade
         y_pred_proba = [conf if pred == 'TOXIC' else 1-conf for pred, conf in zip(predictions, confidences)]
         auc_roc = roc_auc_score(y_true_binary, y_pred_proba)
     except Exception as e:
@@ -201,11 +220,12 @@ def evaluate_toxicity_model(model, test_data: pd.DataFrame) -> dict:
         'recall': recall,
         'f1_score': f1,
         'auc_roc': auc_roc,
-        'classification_report': classification_report(true_labels, predictions),
+        'classification_report': classification_report(true_labels, predictions, zero_division=0),
         'confusion_matrix': confusion_matrix(true_labels, predictions).tolist(),
         'predictions': predictions,
         'confidences': confidences,
-        'true_labels': true_labels
+        'true_labels': true_labels,
+        'texts': texts
     }
 
 def evaluate_language_model(model, test_data: pd.DataFrame) -> dict:
@@ -214,31 +234,36 @@ def evaluate_language_model(model, test_data: pd.DataFrame) -> dict:
     
     predictions = []
     true_labels = []
+    texts = []
     
     for _, row in test_data.iterrows():
         try:
             result = model.predict_language_appropriateness(row['text'])
-            predictions.append(result['class'])
+            # --- FIX: Usar predicted_class ---
+            pred_class = result.get('predicted_class', result.get('class'))
+            
+            predictions.append(pred_class)
             true_labels.append(row['label'])
+            texts.append(row['text'])
         except Exception as e:
             logger.warning(f"Erro ao processar amostra: {e}")
             continue
     
-    # Calcular métricas
     accuracy = accuracy_score(true_labels, predictions)
-    precision = precision_score(true_labels, predictions, average='binary', pos_label='INAPPROPRIATE')
-    recall = recall_score(true_labels, predictions, average='binary', pos_label='INAPPROPRIATE')
-    f1 = f1_score(true_labels, predictions, average='binary', pos_label='INAPPROPRIATE')
+    precision = precision_score(true_labels, predictions, average='binary', pos_label='INAPPROPRIATE', zero_division=0)
+    recall = recall_score(true_labels, predictions, average='binary', pos_label='INAPPROPRIATE', zero_division=0)
+    f1 = f1_score(true_labels, predictions, average='binary', pos_label='INAPPROPRIATE', zero_division=0)
     
     return {
         'accuracy': accuracy,
         'precision': precision,
         'recall': recall,
         'f1_score': f1,
-        'classification_report': classification_report(true_labels, predictions),
+        'classification_report': classification_report(true_labels, predictions, zero_division=0),
         'confusion_matrix': confusion_matrix(true_labels, predictions).tolist(),
         'predictions': predictions,
-        'true_labels': true_labels
+        'true_labels': true_labels,
+        'texts': texts
     }
 
 def evaluate_educational_model(model, test_data: pd.DataFrame) -> dict:
@@ -248,26 +273,34 @@ def evaluate_educational_model(model, test_data: pd.DataFrame) -> dict:
     predictions = []
     scores = []
     true_labels = []
+    texts = []
     
     for _, row in test_data.iterrows():
         try:
             result = model.predict_educational_value(row['text'])
             score = model.get_educational_score(result)
             
-            predictions.append(result['class'] if 'class' in result else 'EDUCATIONAL' if score > 0.5 else 'NON_EDUCATIONAL')
+            # --- FIX: Lógica de classe ---
+            if 'predicted_class' in result:
+                pred_class = result['predicted_class']
+            elif 'class' in result:
+                pred_class = result['class']
+            else:
+                pred_class = 'EDUCATIONAL' if score > 0.5 else 'NON_EDUCATIONAL'
+            
+            predictions.append(pred_class)
             scores.append(score)
             true_labels.append(row['label'])
+            texts.append(row['text'])
         except Exception as e:
             logger.warning(f"Erro ao processar amostra: {e}")
             continue
     
-    # Calcular métricas
     accuracy = accuracy_score(true_labels, predictions)
-    precision = precision_score(true_labels, predictions, average='weighted')
-    recall = recall_score(true_labels, predictions, average='weighted')
-    f1 = f1_score(true_labels, predictions, average='weighted')
+    precision = precision_score(true_labels, predictions, average='weighted', zero_division=0)
+    recall = recall_score(true_labels, predictions, average='weighted', zero_division=0)
+    f1 = f1_score(true_labels, predictions, average='weighted', zero_division=0)
     
-    # Métricas específicas para score educacional
     mean_score = np.mean(scores) if scores else 0
     std_score = np.std(scores) if scores else 0
     
@@ -278,11 +311,12 @@ def evaluate_educational_model(model, test_data: pd.DataFrame) -> dict:
         'f1_score': f1,
         'mean_educational_score': mean_score,
         'std_educational_score': std_score,
-        'classification_report': classification_report(true_labels, predictions),
+        'classification_report': classification_report(true_labels, predictions, zero_division=0),
         'confusion_matrix': confusion_matrix(true_labels, predictions).tolist(),
         'predictions': predictions,
         'scores': scores,
-        'true_labels': true_labels
+        'true_labels': true_labels,
+        'texts': texts
     }
 
 def save_results(results: dict, output_dir: str, model_type: str, save_predictions: bool = False):
@@ -291,13 +325,15 @@ def save_results(results: dict, output_dir: str, model_type: str, save_predictio
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # Salvar métricas principais
+    # Salvar métricas principais (JSON)
     metrics_file = os.path.join(output_dir, f"{model_type}_metrics_{timestamp}.json")
     
-    # Preparar dados para JSON (remover arrays numpy)
     json_results = {}
+    # Ignora listas longas no JSON de métricas
+    exclude_keys = ['predictions', 'true_labels', 'confidences', 'scores', 'texts']
+    
     for key, value in results.items():
-        if key in ['predictions', 'true_labels', 'confidences', 'scores'] and not save_predictions:
+        if key in exclude_keys:
             continue
         elif isinstance(value, np.ndarray):
             json_results[key] = value.tolist()
@@ -311,21 +347,39 @@ def save_results(results: dict, output_dir: str, model_type: str, save_predictio
     
     logger.info(f"Métricas salvas em: {metrics_file}")
     
-    # Salvar predições detalhadas se solicitado
+    # Salvar predições detalhadas (CSV) se solicitado
     if save_predictions and 'predictions' in results:
         predictions_file = os.path.join(output_dir, f"{model_type}_predictions_{timestamp}.csv")
         
-        pred_df = pd.DataFrame({
+        data_dict = {
             'true_label': results['true_labels'],
             'predicted_label': results['predictions']
-        })
+        }
         
+        # Adiciona o texto se disponível (Melhoria solicitada)
+        if 'texts' in results and len(results['texts']) == len(results['predictions']):
+            data_dict['text'] = results['texts']
+            # Reordenar para o texto ficar primeiro
+            cols = ['text', 'true_label', 'predicted_label']
+        else:
+            cols = ['true_label', 'predicted_label']
+
         if 'confidences' in results:
-            pred_df['confidence'] = results['confidences']
+            data_dict['confidence'] = results['confidences']
+            cols.append('confidence')
+            
         if 'scores' in results:
-            pred_df['score'] = results['scores']
+            data_dict['score'] = results['scores']
+            cols.append('score')
         
-        pred_df.to_csv(predictions_file, index=False)
+        pred_df = pd.DataFrame(data_dict)
+        
+        # Garante a ordem das colunas
+        final_cols = [c for c in cols if c in pred_df.columns]
+        pred_df = pred_df[final_cols]
+        
+        # Salvar com ; para facilitar abertura no Excel BR
+        pred_df.to_csv(predictions_file, index=False, sep=';', encoding='utf-8-sig')
         logger.info(f"Predições salvas em: {predictions_file}")
 
 def main():
@@ -357,12 +411,15 @@ def main():
         elif args.model == 'educational':
             results = evaluate_educational_model(model, test_data)
         
-        # Exibir resultados principais
-        logger.info("=== Resultados da Avaliação ===")
+        # Exibir resultados principais no log
+        logger.info("=== Resultados Gerais ===")
         logger.info(f"Acurácia: {results['accuracy']:.4f}")
-        logger.info(f"Precisão: {results['precision']:.4f}")
-        logger.info(f"Recall: {results['recall']:.4f}")
-        logger.info(f"F1-Score: {results['f1_score']:.4f}")
+        logger.info(f"Precisão (Weighted): {results['precision']:.4f}")
+        logger.info(f"Recall (Weighted): {results['recall']:.4f}")
+        logger.info(f"F1-Score (Weighted): {results['f1_score']:.4f}")
+        
+        if 'f1_score_macro' in results:
+             logger.info(f"F1-Score (Macro): {results['f1_score_macro']:.4f}")
         
         if 'auc_roc' in results and results['auc_roc']:
             logger.info(f"AUC-ROC: {results['auc_roc']:.4f}")
@@ -377,6 +434,8 @@ def main():
         
     except Exception as e:
         logger.error(f"Erro durante a avaliação: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":

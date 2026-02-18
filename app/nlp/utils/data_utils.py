@@ -7,8 +7,8 @@ de acordo com as diferentes tarefas de classificação.
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from typing import Dict, List, Tuple, Any
+from sklearn.model_selection import train_test_split, StratifiedKFold
+from typing import Dict, List, Tuple, Any, Generator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -154,9 +154,9 @@ def get_task_info() -> Dict[str, Dict[str, Any]]:
         },
         'TOX': {
             'name': 'Detecção de Toxicidade',
-            'description': 'Classifica textos por nível de toxicidade: não-tóxico (0), leve (1), moderado (2), severo (3)',
-            'num_labels': 4,
-            'labels': {0: 'não-tóxico', 1: 'leve', 2: 'moderado', 3: 'severo'}
+            'description': 'Classifica textos por nível de toxicidade: nenhuma (0), leve (1), severa (2)',
+            'num_labels': 3,
+            'labels': {0: 'nenhuma', 1: 'leve', 2: 'severa'}
         },
         'LI': {
             'name': 'Linguagem Imprópria',
@@ -171,3 +171,11 @@ def get_task_info() -> Dict[str, Dict[str, Any]]:
             'labels': {0: 'não-educacional', 1: 'baixo', 2: 'médio', 3: 'alto'}
         }
     }
+
+# --- NOVA FUNÇÃO PARA CROSS-VALIDATION ---
+def get_kfold_split(texts: np.ndarray, labels: np.ndarray, n_splits: int = 5, random_state: int = 42) -> Generator:
+    """
+    Gera índices para Cross-Validation estratificado.
+    """
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    return skf.split(texts, labels)

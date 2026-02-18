@@ -1,0 +1,7 @@
+Dataset: c:/GitHub/brasnam-2026/data/corpus_toxicidade.csv
+Timestamp: 2026-02-09 18:58:00
+
+Contagem por classe de toxicidade:
+- 0 (Nenhuma): 1491
+- 1 (Leve): 771
+- 2 (Severa): 736

@@ -51,12 +51,10 @@ class BertimbauSentiment(BertimbauBase):
         """
         Pré-processamento específico para análise de sentimentos.
         
-        TODO: Implemente aqui qualquer pré-processamento específico para sentimentos
-        Exemplos:
-        - Normalização de emoticons
+        Implementa pré-processamento específico para sentimentos:
+        - Limpeza de texto (remoção de aspas triplas do formato do dataset)
         - Tratamento de negações
-        - Limpeza de caracteres especiais
-        - Expansão de contrações
+        - Normalização de espaços
         
         Args:
             text: Texto original
@@ -64,14 +62,11 @@ class BertimbauSentiment(BertimbauBase):
         Returns:
             Texto pré-processado
         """
-        # TODO: Implementar pré-processamento específico
-        # Por enquanto, retorna o texto original
-        processed_text = text
+        # Aplica limpeza básica primeiro
+        processed_text = self._clean_text(text)
         
-        # Exemplo de implementações que você pode fazer:
-        # processed_text = self._normalize_emoticons(text)
-        # processed_text = self._handle_negations(processed_text)
-        # processed_text = self._clean_text(processed_text)
+        # Trata negações
+        processed_text = self._handle_negations(processed_text)
         
         return processed_text
     
@@ -161,14 +156,17 @@ class BertimbauSentiment(BertimbauBase):
         logger.info("Iniciando treinamento do modelo de Análise de Sentimentos")
         
         # Cria helper de treinamento
+        from ..config import PATHS
         training_helper = TrainingHelper(
             task_name=self.task_name,
-            model_name=self.model_config['base_model']
+            model_name=self.model_config['base_model'],
+            output_base_dir=os.path.join(PATHS['models_dir'], 'trained')
         )
         
-        # TODO: Aplique pré-processamento específico nos dados de treino
-        # train_texts = [self.preprocess_for_sentiment(text) for text in train_texts]
-        # val_texts = [self.preprocess_for_sentiment(text) for text in val_texts]
+        # Aplica pré-processamento específico nos dados de treino
+        logger.info("Aplicando pré-processamento específico para sentimentos...")
+        train_texts = [self.preprocess_for_sentiment(text) for text in train_texts]
+        val_texts = [self.preprocess_for_sentiment(text) for text in val_texts]
         
         # Prepara datasets
         train_dataset, val_dataset, _ = training_helper.prepare_datasets(
@@ -185,6 +183,18 @@ class BertimbauSentiment(BertimbauBase):
         # Configurações de treinamento
         training_config = get_training_config(config_name)
         output_dir = training_helper.get_output_dir(experiment_name)
+        
+        # Remove seed da config (já é hardcoded no get_training_args)
+        training_config = {k: v for k, v in training_config.items() if k != 'seed'}
+        
+        # === CORREÇÃO PARA O ERRO DE PERMISSÃO DO WINDOWS ===
+        # Forçamos o modelo a NÃO salvar checkpoints intermediários e NÃO tentar carregar o melhor no final.
+        # Ele só vai salvar o modelo final quando acabar o treino.
+        logger.info("Desativando checkpoints e load_best_model_at_end para evitar erro do Windows.")
+        training_config['save_strategy'] = 'no' 
+        training_config['save_steps'] = 0
+        training_config['load_best_model_at_end'] = False # <--- ESSENCIAL AGORA
+        # ====================================================
         
         training_args = training_helper.get_training_args(
             output_dir=output_dir,
@@ -214,7 +224,7 @@ class BertimbauSentiment(BertimbauBase):
             metrics=eval_results,
             additional_info={
                 'task_specific_info': 'Modelo treinado para análise de sentimentos',
-                'preprocessing_applied': 'TODO: Descrever pré-processamentos aplicados'
+                'preprocessing_applied': 'Limpeza de aspas triplas, tratamento de negações, normalização de espaços'
             }
         )
         
@@ -253,35 +263,70 @@ class BertimbauSentiment(BertimbauBase):
         
         return results
     
-    # TODO: Implemente métodos auxiliares conforme necessário
-    def _normalize_emoticons(self, text: str) -> str:
-        """
-        Normaliza emoticons no texto.
-        
-        TODO: Implemente normalização de emoticons
-        Exemplo: :) -> [EMOTICON_POSITIVO]
-        """
-        # Implementação exemplo - você deve expandir isso
-        return text
-    
+    # Métodos auxiliares para pré-processamento
     def _handle_negations(self, text: str) -> str:
         """
-        Trata negações no texto.
+        Trata negações no texto para melhorar a detecção de sentimentos negativos.
         
-        TODO: Implemente tratamento de negações
-        Exemplo: "não gostei" -> "não_gostei"
+        Identifica padrões de negação em português e marca as palavras seguintes
+        para ajudar o modelo a entender melhor o contexto de sentimentos negativos.
+        
+        Args:
+            text: Texto com possíveis negações
+            
+        Returns:
+            Texto com negações tratadas
         """
-        # Implementação exemplo - você deve expandir isso
-        return text
+        import re
+        
+        # Padrões de negação em português
+        negation_words = ['não', 'nao', 'nunca', 'jamais', 'nem', 'nenhum', 'nenhuma', 'sem']
+        
+        processed_text = text
+        
+        # Para cada palavra de negação, marca as palavras seguintes
+        for negation in negation_words:
+            pattern = r'\b' + negation + r'\s+(\w+)'
+            matches = re.finditer(pattern, processed_text, re.IGNORECASE)
+            
+            replacements = []
+            for match in matches:
+                negated_word = match.group(1)
+                replacement = f'{match.group(0).split()[0]} NEG_{negated_word}'
+                replacements.append((match.group(0), replacement))
+            
+            # Aplica substituições (da última para a primeira)
+            for original, replacement in reversed(replacements):
+                processed_text = processed_text.replace(original, replacement, 1)
+        
+        return processed_text
     
     def _clean_text(self, text: str) -> str:
         """
         Limpa o texto removendo caracteres desnecessários.
         
-        TODO: Implemente limpeza específica para sentimentos
+        Remove aspas triplas do formato do dataset e normaliza espaços em branco.
+        
+        Args:
+            text: Texto original
+            
+        Returns:
+            Texto limpo
         """
-        # Implementação exemplo - você deve expandir isso
-        return text.strip()
+        if not isinstance(text, str):
+            return ""
+        
+        # Remove aspas triplas (formato do dataset: """texto""")
+        processed_text = text.replace('"""', '').replace('"', '')
+        
+        # Normaliza espaços em branco
+        import re
+        processed_text = re.sub(r'\s+', ' ', processed_text)
+        
+        # Remove espaços extras no início e fim
+        processed_text = processed_text.strip()
+        
+        return processed_text
 
 
 # Função de conveniência para criar e usar o modelo

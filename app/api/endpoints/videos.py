@@ -5,7 +5,6 @@ from ...core.youtube import YouTubeAPI
 from ...core.config import get_settings
 import json
 import logging
-import sys
 import traceback
 import time
 
@@ -13,18 +12,6 @@ router = APIRouter()
 settings = get_settings()
 youtube_api = YouTubeAPI(settings.YOUTUBE_API_KEY)
 logger = logging.getLogger(__name__)
-
-# Configuração específica do logger para este módulo
-logger.setLevel(logging.DEBUG)
-# Remove handlers existentes para evitar duplicação
-for handler in logger.handlers[:]:
-    logger.removeHandler(handler)
-# Adiciona novo handler
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 @router.get("/search/")
 async def search_videos(
@@ -75,8 +62,7 @@ async def search_videos(
                 logger.info(f"Usando filtro de duração: {video_duration}")
         
         # Identifica filtros de PLN habilitados
-        nlp_filter_names = ["Análise de Sentimentos", "Detecção de Toxicidade", "Classificação Educacional", "Detecção de Linguagem Imprópria"]
-        nlp_filters_enabled = [filter_name for filter_name in nlp_filter_names if filter_name in filter_weights_dict]
+        nlp_filters_enabled = [f for f in settings.NLP_FILTER_NAMES if f in filter_weights_dict]
         
         if nlp_filters_enabled:
             logger.info(f"Filtros de PLN detectados: {nlp_filters_enabled}")

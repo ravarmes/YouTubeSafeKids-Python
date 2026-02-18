@@ -55,27 +55,13 @@ class LanguageFilter(BaseFilter):
             # Usa o modelo para predizer adequação da linguagem
             result = self.model.predict_language_appropriateness(combined_text)
             
-            # Classes: 0=Nenhuma, 1=Leve, 2=Severa
-            # Score: 1 = linguagem apropriada (bom), 0 = linguagem severa (ruim)
-            predicted_class = result['predicted_class']
-            
-            if 'probabilities' in result:
-                # Calcula score usando probabilidades ponderadas
-                # Pesos: quanto mais impróprio, menor o score
-                class_weights = {
-                    'Nenhuma': 1.0,
-                    'Leve': 0.5,
-                    'Severa': 0.0
-                }
-                score = sum(
-                    result['probabilities'].get(label, 0) * weight 
-                    for label, weight in class_weights.items()
-                )
+            # Converte para score (0 = severa, 1 = nenhuma)
+            if result['class'] == 'INAPPROPRIATE':
+                score = 1 - result['confidence']  # Inverte para que impróprio = baixo score
             else:
-                # Fallback: calcula baseado apenas na classe predita
-                score = 1.0 - (predicted_class / 2.0)
+                score = result['confidence']  # Nenhuma = alto score
             
-            return min(max(score, 0.0), 1.0)
+            return score
             
         except Exception as e:
             logger.error(f"Erro ao processar linguagem: {e}")

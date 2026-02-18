@@ -19,7 +19,7 @@ const utils = {
         const hours = (match[1] || '').replace('H', '') || '0';
         const minutes = (match[2] || '').replace('M', '') || '0';
         const seconds = (match[3] || '').replace('S', '') || '0';
-        
+
         if (hours !== '0') {
             return `${hours}:${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}`;
         }
@@ -31,10 +31,10 @@ const utils = {
         const notification = document.createElement('div');
         notification.className = `notification ${type} animate-slide-in`;
         notification.textContent = message;
-        
+
         document.body.appendChild(notification);
         setTimeout(() => notification.classList.add('show'), 100);
-        
+
         setTimeout(() => {
             notification.classList.remove('show');
             setTimeout(() => notification.remove(), 300);
@@ -46,7 +46,7 @@ const utils = {
 class FilterManager {
     constructor() {
         this.filters = {};
-        
+
         // Inicializa filtros dinamicamente a partir dos checkboxes existentes no DOM
         document.querySelectorAll('.filter-enabled').forEach(checkbox => {
             const filterName = checkbox.id.replace('filter-enabled-', '');
@@ -63,25 +63,25 @@ class FilterManager {
 
         this.initializeEventListeners();
     }
-    
+
     setFilterDefaultValues() {
         // Define valores padrão específicos para cada filtro
         const defaultValues = {
             'Tópicos Educacionais': 100,  // Máximo (conforme solicitado)
-            'Toxicidade': 0,              // Mínimo (conforme solicitado)
-            'Linguagem Imprópria': 0,     // Mínimo (conforme solicitado)
+            'Toxicidade': 0,              // Mínimo: busca conteúdo sem toxicidade
+            'Linguagem Imprópria': 0,     // Mínimo: busca conteúdo sem linguagem imprópria
             'Diversidade': 100,
             'Interatividade': 100,
             'Engajamento': 100,
             'Sentimento': 100,
-            'Conteúdo Sensível': 0
+            'Conteúdo Sensível': 0        // Mínimo: busca conteúdo sem conteúdo sensível
         };
-        
+
         // Atualiza os valores no objeto filters
         for (const [filterName, value] of Object.entries(defaultValues)) {
             if (this.filters[filterName]) {
                 this.filters[filterName].value = value;
-                
+
                 // Atualiza também os elementos visuais
                 const rangeInput = document.querySelector(`.filter-range[data-filter="${filterName}"]`);
                 if (rangeInput) {
@@ -95,19 +95,19 @@ class FilterManager {
         // Verifica se existe um radio button para este filtro
         const durationRadio = document.querySelector('input[name="duration"]:checked');
         const ageRadio = document.querySelector('input[name="age"]:checked');
-        
+
         if (filterName === 'Duração' && durationRadio) {
             return durationRadio.value;
         } else if (filterName === 'Faixa Etária' && ageRadio) {
             return ageRadio.value;
         }
-        
+
         // Para sliders, obtém o valor do elemento range
         const rangeInput = document.querySelector(`.filter-range[data-filter="${filterName}"]`);
         if (rangeInput) {
             return parseInt(rangeInput.value);
         }
-        
+
         // Valor padrão
         return 50;
     }
@@ -116,11 +116,11 @@ class FilterManager {
         // Checkboxes para habilitar/desabilitar filtros
         document.querySelectorAll('.filter-enabled').forEach(checkbox => {
             const filterName = checkbox.id.replace('filter-enabled-', '');
-            
+
             // Verifica se o filtro existe antes de acessar suas propriedades
             if (this.filters[filterName]) {
                 checkbox.checked = this.filters[filterName].enabled;
-                
+
                 checkbox.addEventListener('change', (e) => {
                     this.filters[filterName].enabled = e.target.checked;
                 });
@@ -140,11 +140,11 @@ class FilterManager {
         // Range sliders
         document.querySelectorAll('.filter-range').forEach(range => {
             const filterName = range.dataset.filter;
-            
+
             // Verifica se o filtro existe antes de acessar suas propriedades
             if (this.filters[filterName]) {
                 range.value = this.filters[filterName].value;
-                
+
                 range.addEventListener('input', (e) => {
                     this.filters[filterName].value = parseInt(e.target.value);
                 });
@@ -169,12 +169,12 @@ class FilterManager {
 
     toggleAllFilters(enabled) {
         console.log(`Alterando estado de todos os filtros para: ${enabled ? 'habilitado' : 'desabilitado'}`);
-        
+
         // Primeiro atualizamos o estado nos checkboxes visuais
         document.querySelectorAll('.filter-enabled').forEach(checkbox => {
             checkbox.checked = enabled;
             const filterName = checkbox.id.replace('filter-enabled-', '');
-            
+
             // Em seguida, atualizamos o estado no objeto de filtros
             if (this.filters[filterName]) {
                 this.filters[filterName].enabled = enabled;
@@ -186,10 +186,10 @@ class FilterManager {
     getFilterWeights() {
         const weights = {};
         console.log("Coletando filtros habilitados:");
-        
+
         for (const [name, filter] of Object.entries(this.filters)) {
             console.log(`- Filtro ${name}: ${filter.enabled ? 'habilitado' : 'desabilitado'}`);
-            
+
             // Só inclui filtros que estão marcados como habilitados
             if (!filter.enabled) {
                 console.log(`  - Filtro ${name} ignorado (desabilitado)`);
@@ -198,8 +198,10 @@ class FilterManager {
 
             // Determina o valor do filtro baseado no tipo
             if (typeof filter.value === 'number') {
-                weights[name] = filter.value / 100;
-                console.log(`  - Adicionado ${name} com valor numérico: ${filter.value / 100}`);
+                // Peso sempre 1.0 para filtros habilitados
+                // O slider é apenas indicador visual, não afeta o peso
+                weights[name] = 1.0;
+                console.log(`  - Adicionado ${name} com peso: 1.0 (slider: ${filter.value})`);
             } else {
                 weights[name] = {
                     type: filter.value,
@@ -208,10 +210,10 @@ class FilterManager {
                 console.log(`  - Adicionado ${name} com tipo: ${filter.value}`);
             }
         }
-        
+
         // Log do resultado final
         console.log("Filtros habilitados para envio:", weights);
-        
+
         return weights;
     }
 }
@@ -228,7 +230,7 @@ class SearchManager {
         this.loadingOverlay = document.getElementById('loading-overlay');
         this.loadingSpinner = document.querySelector('.loading-spinner');
         this.isSearching = false;
-        
+
         this.initializeEventListeners();
     }
 
@@ -275,45 +277,45 @@ class SearchManager {
             utils.showNotification('Por favor, digite um termo de busca', 'warning');
             return;
         }
-        
+
         // Evita múltiplas requisições simultâneas
         if (this.isSearching) {
             return;
         }
-        
+
         this.isSearching = true;
         this.showLoading();
-        
+
         try {
             // Obtém os filtros habilitados
             const filterWeights = this.filterManager.getFilterWeights();
             console.log('\n=== Search Request Details ===');
             console.log('Query:', query);
             console.log('Enabled filters:', filterWeights);
-            
+
             const params = new URLSearchParams({
                 query: query,
                 filter_weights: JSON.stringify(filterWeights)
             });
-            
+
             const apiUrl = `/api/v1/videos/search/?${params}`;
             console.log('Request URL:', apiUrl);
-            
+
             const response = await fetch(apiUrl);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
             console.log('API Response:', data);
-            
+
             this.displayResults(data.videos);
-            
+
         } catch (error) {
             console.error('Search error:', error);
             utils.showNotification('Erro ao buscar vídeos', 'error');
-            
+
         } finally {
             this.hideLoading();
             this.isSearching = false;
@@ -323,7 +325,7 @@ class SearchManager {
     displayResults(videos) {
         this.videoGrid.innerHTML = '';
         this.resultsSection.classList.remove('hidden');
-        
+
         if (!videos || videos.length === 0) {
             const noResults = document.createElement('div');
             noResults.className = 'col-span-full text-center text-gray-600 py-8';
@@ -334,10 +336,10 @@ class SearchManager {
             this.videoGrid.appendChild(noResults);
             return;
         }
-        
+
         // Mostra os vídeos encontrados
         console.log(`\n=== Exibindo ${videos.length} vídeos nos resultados ===`);
-        
+
         videos.forEach((video, index) => {
             try {
                 // Verificar se o vídeo tem as propriedades necessárias
@@ -345,12 +347,12 @@ class SearchManager {
                     console.warn('Vídeo inválido nos resultados:', video);
                     return;
                 }
-                
+
                 // Log detalhado do vídeo e seus scores
                 console.log(`\nVídeo ${index + 1}: ${video.title}`);
                 console.log(`ID: ${video.id}`);
                 console.log(`Duração: ${video.duration || 'N/A'} (${video.duration_seconds || 0} segundos)`);
-                
+
                 if (video.filter_scores) {
                     console.log('Scores dos filtros:');
                     Object.entries(video.filter_scores).forEach(([filter, score]) => {
@@ -360,10 +362,10 @@ class SearchManager {
                 } else {
                     console.log('Nenhum score de filtro disponível');
                 }
-                
+
                 // Clone o template
                 const template = this.videoTemplate.content.cloneNode(true);
-                
+
                 // Preenche os dados do vídeo
                 const card = template.querySelector('.video-card');
                 const title = template.querySelector('.video-title');
@@ -372,14 +374,14 @@ class SearchManager {
                 const viewCount = template.querySelector('.video-views');
                 const duration = template.querySelector('.video-duration');
                 const score = template.querySelector('.video-score');
-                
+
                 // ID para link
                 card.dataset.videoId = video.id;
                 card.href = `https://www.youtube.com/watch?v=${video.id}`;
-                
+
                 // Título
                 title.textContent = video.title;
-                
+
                 // Thumbnail
                 if (video.thumbnail) {
                     thumbnail.src = video.thumbnail;
@@ -387,21 +389,21 @@ class SearchManager {
                 } else {
                     thumbnail.src = '/static/img/placeholder.jpg';
                 }
-                
+
                 // Canal
                 if (video.channel_title) {
                     channelName.textContent = video.channel_title;
                 } else {
                     channelName.textContent = 'Canal desconhecido';
                 }
-                
+
                 // Views
                 if (video.view_count !== undefined) {
                     viewCount.textContent = utils.formatNumber(video.view_count) + ' visualizações';
                 } else {
                     viewCount.textContent = 'Views indisponíveis';
                 }
-                
+
                 // Duração
                 if (video.duration) {
                     duration.textContent = utils.formatDuration(video.duration);
@@ -413,12 +415,12 @@ class SearchManager {
                 } else {
                     duration.textContent = '--:--';
                 }
-                
+
                 // Score
                 if (video.final_score !== undefined) {
                     const scoreValue = Math.round(video.final_score * 100);
                     score.textContent = `Score: ${scoreValue}%`;
-                    
+
                     // Cor baseada no score
                     if (scoreValue >= 80) {
                         score.classList.add('bg-green-500');
@@ -431,10 +433,10 @@ class SearchManager {
                     score.textContent = 'Score: N/A';
                     score.classList.add('bg-gray-500');
                 }
-                
+
                 // Adiciona o card à grade
                 this.videoGrid.appendChild(template);
-                
+
             } catch (error) {
                 console.error('Erro ao exibir vídeo:', error);
             }

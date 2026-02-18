@@ -6,31 +6,15 @@ from fastapi.requests import Request
 from .core.config import get_settings
 from .core.logging import setup_logging
 from .api.endpoints import videos
-from .filters import filter_manager
-from .filters.duration import DurationFilter
-from .filters.age_rating import AgeRatingFilter
-from .filters.educational import EducationalFilter
-from .filters.toxicity import ToxicityFilter
-from .filters.language import LanguageFilter
-from .filters.diversity import DiversityFilter
-from .filters.interactivity import InteractivityFilter
-from .filters.engagement import EngagementFilter
-from .filters.sentiment import SentimentFilter
-from .filters.sensitive import SensitiveFilter
-import logging
-import sys
-
-# Configuração de logs para garantir que tudo seja exibido
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler("app.log", mode="a", encoding="utf-8")
-    ]
+from .filters import (
+    filter_manager,
+    DurationFilter, EngagementFilter, SentimentFilter, LanguageFilter,
+    ToxicityFilter, AgeRatingFilter, DiversityFilter, InteractivityFilter,
+    EducationalFilter, SensitiveFilter,
 )
+import logging
 
-# Setup logging
+# Setup logging (configuração centralizada em core/logging.py)
 logger = setup_logging()
 
 # Get settings
@@ -69,16 +53,22 @@ for route in app.routes:
 # Register filters
 logger.info("")
 logger.info("=== Registrando filtros ===")
-filter_manager.register_filter("Duração", DurationFilter())
-filter_manager.register_filter("Faixa Etária", AgeRatingFilter())
-filter_manager.register_filter("Educacional", EducationalFilter())
-filter_manager.register_filter("Toxicidade", ToxicityFilter())
-filter_manager.register_filter("Linguagem Imprópria", LanguageFilter())
-filter_manager.register_filter("Diversidade", DiversityFilter())
-filter_manager.register_filter("Interatividade", InteractivityFilter())
-filter_manager.register_filter("Engajamento", EngagementFilter())
-filter_manager.register_filter("Sentimento", SentimentFilter())
-filter_manager.register_filter("Conteúdo Sensível", SensitiveFilter())
+
+_FILTERS = {
+    "Duração": DurationFilter(),
+    "Engajamento": EngagementFilter(),
+    "Sentimento": SentimentFilter(),
+    "Linguagem Imprópria": LanguageFilter(),
+    "Toxicidade": ToxicityFilter(),
+    "Faixa Etária": AgeRatingFilter(),
+    "Diversidade": DiversityFilter(),
+    "Interatividade": InteractivityFilter(),
+    "Tópicos Educacionais": EducationalFilter(),
+    "Conteúdo Sensível": SensitiveFilter(),
+}
+
+for name, instance in _FILTERS.items():
+    filter_manager.register_filter(name, instance)
 
 logger.info("")
 logger.info("="*80)

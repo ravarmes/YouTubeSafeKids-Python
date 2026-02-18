@@ -1,8 +1,8 @@
 # YouTube Safe Kids
 
 <h1 align="center">
-    <img alt="RVM" src="https://github.com/ravarmes/YouTubeSafeKids-Python/blob/main/app/static/img/logo.jpg" />
-    <img alt="YouTubeSafeKids" src="https://github.com/ravarmes/YouTubeSafeKids-Python/blob/main/app/static/img/logo.svg" width="100" height="100"/>
+    <img alt="Logo" src="app/static/img/logo.jpg" />
+    <img alt="YouTubeSafeKids" src="app/static/img/logo.svg" width="100" height="100"/>
 </h1>
 
 <h3 align="center">
@@ -11,19 +11,7 @@
 
 <p align="center">Filtragem Avançada de Conteúdos Infantis</p>
 
-<p align="center">
-  <img alt="GitHub language count" src="https://img.shields.io/github/languages/count/ravarmes/YouTubeSafeKids-Python?color=%2304D361">
-
-  <a href="http://www.linkedin.com/in/rafael-vargas-mesquita">
-    <img alt="Made by Rafael Vargas Mesquita" src="https://img.shields.io/badge/made%20by-Rafael%20Vargas%20Mesquita-%2304D361">
-  </a>
-
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-%2304D361">
-
-  <a href="https://github.com/ravarmes/YouTubeSafeKids-Python/stargazers">
-    <img alt="Stargazers" src="https://img.shields.io/github/stars/ravarmes/YouTubeSafeKids-Python?style=social">
-  </a>
-</p>
+<p align="center"></p>
 
 ## Sobre o projeto
 
@@ -46,11 +34,11 @@ Uma aplicação web que ajuda a encontrar vídeos seguros e apropriados para cri
   
 ## :notebook_with_decorative_cover: Arquitetura do Sistema <a name="-architecture"/></a>
 
-<img alt="YouTubeSafeKids-Metodologia" src="https://github.com/ravarmes/YouTubeSafeKids-Python/blob/main/app/static/img/YouTubeSafeKids-Metodologia.png" />
+<img alt="YouTubeSafeKids-Metodologia" src="app/static/img/YouTubeSafeKids-Metodologia.png" />
 
 ## :notebook_with_decorative_cover: Protótipo da Plataforma <a name="-architecture"/></a>
 
-<img alt="YouTubeSafeKids-Prototipo" src="https://github.com/ravarmes/YouTubeSafeKids-Python/blob/main/app/static/img/YouTubeSafeKids-Prototipo.png" />
+<img alt="YouTubeSafeKids-Prototipo" src="app/static/img/YouTubeSafeKids-Prototipo.png" />
 
 
 ## Requisitos
@@ -69,9 +57,9 @@ cd YouTubeSafeKids-Python
 
 2. Crie um ambiente virtual e ative-o:
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
+python -m venv venv_nlp
+source venv_nlp/bin/activate  # Linux/Mac
+venv_nlp\Scripts\activate     # Windows
 ```
 
 3. Instale as dependências:
@@ -87,9 +75,13 @@ cp .env.example .env
 
 ## Uso
 
-1. Inicie o servidor:
+1. Inicie o servidor (usando o ambiente virtual):
 ```bash
-uvicorn app.main:app --reload --log-level debug
+# Linux/Mac
+venv_nlp/bin/python -m uvicorn app.main:app --reload --port 8000
+
+# Windows
+.\venv_nlp\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
 2. Acesse a aplicação em `http://localhost:8000`
@@ -106,15 +98,23 @@ app/
 │   ├── endpoints/
 │   │   └── videos.py
 │   └── dependencies.py
+├── cache/
+│   ├── cache_manager.py
+│   ├── cache_pernalonga.json
+│   └── cache_southpark.json
 ├── core/
 │   ├── config.py
 │   ├── logging.py
 │   └── youtube.py
 ├── filters/
 │   ├── base.py
+│   ├── filter_manager.py
 │   ├── duration.py
 │   ├── age_rating.py
 │   └── ... (outros filtros)
+├── nlp/
+│   ├── models/
+│   └── config.py
 ├── static/
 │   ├── css/
 │   └── js/
@@ -154,12 +154,10 @@ O projeto está em desenvolvimento ativo, com atualizações frequentes incluind
 **Arquivos ignorados automaticamente:**
 - `app/nlp/models/cache/` - Cache de modelos do Hugging Face
 - `*.bin`, `*.pth`, `*.h5` - Arquivos de modelos treinados
-- `venv/` - Ambiente virtual Python
+- `venv_nlp/` - Ambiente virtual Python
 
 ## Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
-## :email: Contact
-
-Rafael Vargas Mesquita - [GitHub](https://github.com/ravarmes) - [LinkedIn](https://www.linkedin.com/in/rafael-vargas-mesquita) - [Lattes](http://lattes.cnpq.br/6616283627544820) - **ravarmes@hotmail.com**
+<!-- seção de contato removida para avaliação às cegas -->

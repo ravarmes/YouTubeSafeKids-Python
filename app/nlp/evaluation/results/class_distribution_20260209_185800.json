@@ -1,0 +1,9 @@
+{
+  "dataset": "c:/GitHub/brasnam-2026/data/corpus_toxicidade.csv",
+  "timestamp": "2026-02-09T18:58:00Z",
+  "counts": {
+    "0": 1491,
+    "1": 771,
+    "2": 736
+  }
+}

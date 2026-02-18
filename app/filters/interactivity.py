@@ -1,5 +1,9 @@
 from typing import Dict, Any
 from .base import BaseFilter
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class InteractivityFilter(BaseFilter):
     """
@@ -21,7 +25,7 @@ class InteractivityFilter(BaseFilter):
             # TODO: Implementar lógica de classificação de interatividade
             return 0.5  # Score padrão
         except Exception as e:
-            print(f"Erro ao processar interatividade: {str(e)}")
+            logger.error(f"Erro ao processar interatividade: {str(e)}")
             return 0.0
             
     def get_filter_info(self):
@@ -42,4 +46,4 @@ class InteractivityFilter(BaseFilter):
                     {"value": "high", "label": "Alta interatividade"}
                 ]
             }
-        } 
+        }

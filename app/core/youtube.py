@@ -2,13 +2,14 @@ from typing import List, Dict, Any
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import *
-import httpx
 import isodate
 import logging
 import traceback
 import json
 import re
+import asyncio
 from .config import get_settings
+from app.cache import TranscriptionCacheManager
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -18,7 +19,8 @@ class YouTubeAPI:
         logger.info("YouTubeAPI :: def __init__")
         self.api_key = api_key
         self.youtube = build('youtube', 'v3', developerKey=api_key)
-        
+        self._cache_manager = TranscriptionCacheManager()
+    
     async def search_videos(self, query: str, max_results: int = None, video_duration: str = None, nlp_filters_enabled: List[str] = None) -> List[Dict[str, Any]]:
         logger.info("YouTubeAPI :: def search_videos")
         """
@@ -36,9 +38,17 @@ class YouTubeAPI:
         # Usa a configuração padrão se max_results não for especificado
         if max_results is None:
             max_results = settings.MAX_SEARCH_RESULTS
+        
+        # Verifica se é uma consulta de teste com cache de transcrições
+        if self._cache_manager.is_cached_query(query):
+            cached_results = await self._cache_manager.build_cached_results(
+                query, max_results, self.youtube
+            )
+            if cached_results is not None:
+                return cached_results
             
-        # Lista de filtros de PLN que requerem transcrição
-        nlp_filter_names = ["Análise de Sentimentos", "Detecção de Toxicidade", "Classificação Educacional", "Detecção de Linguagem Imprópria"]
+        # Lista de filtros de PLN que requerem transcrição (nomes devem corresponder aos registrados no main.py)
+        nlp_filter_names = settings.NLP_FILTER_NAMES
         
         # Verifica se algum filtro de PLN está habilitado
         needs_transcription = False
@@ -48,15 +58,21 @@ class YouTubeAPI:
             logger.info(f"Transcrição necessária: {needs_transcription}")
             
         try:
-            # Busca por vídeos sem adicionar "for kids" para aumentar resultados
             safe_query = query
             logger.info(f"Searching for query: {safe_query}")
             
-            # Fazendo a busca com parâmetros básicos
+            # Busca mais candidatos quando filtros NLP estão ativos, para
+            # compensar vídeos sem transcrição. Isto NÃO gasta mais cota:
+            # - search().list() = 100 unidades (independente de maxResults)
+            # - videos().list() = 1 unidade (independente de quantos IDs)
+            # - youtube-transcript-api = 0 unidades (scraping gratuito)
+            fetch_count = max_results * 4 if needs_transcription else max_results
+            fetch_count = min(fetch_count, 15)  # Busca ampla mas limitada para evitar rate limit
+            
             search_params = {
                 'q': safe_query,
                 'part': 'snippet',
-                'maxResults': max_results,
+                'maxResults': fetch_count,
                 'type': 'video',
                 'relevanceLanguage': 'pt',
                 'safeSearch': 'strict'
@@ -64,7 +80,6 @@ class YouTubeAPI:
             
             logger.info("Using strict safeSearch mode for child-appropriate content")
             
-            # Adiciona o parâmetro de duração se especificado
             if video_duration and video_duration in ['short', 'medium', 'long']:
                 search_params['videoDuration'] = video_duration
                 logger.info(f"Filtering by duration: {video_duration}")
@@ -79,7 +94,6 @@ class YouTubeAPI:
                 logger.warning(f"No videos found in search response for query: {query}")
                 return []
 
-            # Coleta IDs dos vídeos para buscar mais informações
             video_ids = [item['id']['videoId'] for item in search_response['items']]
             logger.info(f"Found {len(video_ids)} video IDs")
             
@@ -87,7 +101,6 @@ class YouTubeAPI:
                 logger.warning("No video IDs extracted from search results")
                 return []
                 
-            # Busca detalhes dos vídeos
             logger.info(f"Fetching details for {len(video_ids)} videos")
             videos_response = self.youtube.videos().list(
                 part='snippet,contentDetails,statistics',
@@ -102,16 +115,21 @@ class YouTubeAPI:
                 return []
             
             videos = []
+            skipped = 0
+            rate_limited = False
             for item in videos_response.get('items', []):
+                # Já temos vídeos suficientes
+                if len(videos) >= max_results:
+                    break
+                    
                 try:
-                    # Converte duração ISO 8601 para segundos
                     duration_str = item['contentDetails']['duration']
                     duration = isodate.parse_duration(duration_str).total_seconds()
                     
-                    # Cria objeto com dados do vídeo
+                    video_title = item['snippet']['title']
                     video_data = {
                         'id': item['id'],
-                        'title': item['snippet']['title'],
+                        'title': video_title,
                         'description': item['snippet']['description'],
                         'thumbnail': item['snippet']['thumbnails']['high']['url'] if 'high' in item['snippet']['thumbnails'] else item['snippet']['thumbnails']['default']['url'],
                         'channel_title': item['snippet']['channelTitle'],
@@ -123,25 +141,62 @@ class YouTubeAPI:
                         'comment_count': int(item['statistics'].get('commentCount', 0))
                     }
                     
-                    # Obtém frases do vídeo se filtros de PLN estão habilitados
                     if needs_transcription:
-                        logger.info(f"Obtendo frases para vídeo: {video_data['title']}")
-                        sentences = await self.get_video_sentences(item['id'])
+                        # 1. Verifica cache local primeiro (sem requisição)
+                        cached = self._cache_manager.find_cached_sentences(video_title)
+                        if cached:
+                            video_data['sentences'] = cached
+                            videos.append(video_data)
+                            logger.info(f"CACHE HIT ({len(videos)}/{max_results}): '{video_title}'")
+                            logger.info(f"  início='{cached['start'][:50]}...', meio='{cached['middle'][:50]}...', fim='{cached['end'][:50]}...'")
+                            continue
+                        
+                        # 2. Se rate limited, pula sem tentar a API
+                        if rate_limited:
+                            skipped += 1
+                            logger.warning(f"Rate limited, pulando: '{video_title}'")
+                            continue
+                        
+                        # 3. Tenta API de transcrição (com delay)
+                        if skipped > 0 or len(videos) > 0:
+                            await asyncio.sleep(1.5)
+                        
+                        logger.info(f"Verificando transcrição ({len(videos)}/{max_results}): {video_title}")
+                        try:
+                            sentences = await self.get_video_sentences(item['id'])
+                        except Exception as transcript_error:
+                            error_msg = str(transcript_error)
+                            if '429' in error_msg or 'Too Many Requests' in error_msg:
+                                rate_limited = True
+                                logger.error(f"Rate limited pelo YouTube! Parando verificações de transcrição.")
+                                skipped += 1
+                                continue
+                            raise
+                        
+                        has_transcription = any(
+                            sentences.get(k, '').strip()
+                            for k in ['start', 'middle', 'end']
+                        )
+                        
+                        if not has_transcription:
+                            skipped += 1
+                            logger.warning(f"Sem transcrição, pulando: '{video_title}' ({skipped} pulados)")
+                            continue
+                        
                         video_data['sentences'] = sentences
-                        logger.info(f"Frases obtidas: início='{sentences['start'][:50]}...', meio='{sentences['middle'][:50]}...', fim='{sentences['end'][:50]}...'")
+                        logger.info(f"Transcrição OK: início='{sentences['start'][:50]}...', meio='{sentences['middle'][:50]}...', fim='{sentences['end'][:50]}...'")
                     else:
                         video_data['sentences'] = {"start": "", "middle": "", "end": ""}
                     
                     videos.append(video_data)
-                    logger.info(f"Processed video: '{video_data['title']}' - Duration: {duration} seconds")
+                    logger.info(f"Vídeo aceito ({len(videos)}/{max_results}): '{video_title}'")
                 except Exception as e:
                     logger.error(f"Error processing video {item.get('id', 'unknown')}: {str(e)}")
                     logger.error(traceback.format_exc())
                     continue
             
-            logger.info(f"Successfully processed {len(videos)} videos")
+            logger.info(f"Resultado: {len(videos)} vídeos com transcrição ({skipped} sem transcrição ignorados, rate_limited={rate_limited})")
             
-            # Retorna todos os vídeos mesmo que não tenham sido processados os filtros
             return videos
             
         except Exception as e:
@@ -308,6 +363,11 @@ class YouTubeAPI:
             logger.warning(f"Video {video_id} is unavailable")
             return {"start": "", "middle": "", "end": ""}
         except Exception as e:
-            logger.error(f"Error extracting sentences for video {video_id}: {str(e)}")
+            error_msg = str(e)
+            # Re-raise rate limiting errors para o caller detectar
+            if '429' in error_msg or 'Too Many Requests' in error_msg:
+                logger.error(f"Rate limited ao buscar transcrição para {video_id}")
+                raise
+            logger.error(f"Error extracting sentences for video {video_id}: {error_msg}")
             logger.error(traceback.format_exc())
             return {"start": "", "middle": "", "end": ""}

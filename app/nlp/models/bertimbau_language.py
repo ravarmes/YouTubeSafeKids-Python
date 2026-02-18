@@ -265,6 +265,8 @@ class BertimbauLanguage(BertimbauBase):
         """
         Retorna um score de adequação da linguagem entre 0 e 1.
         
+        TODO: Implemente um sistema de scoring personalizado
+        
         Args:
             text: Texto para análise
             
@@ -273,23 +275,16 @@ class BertimbauLanguage(BertimbauBase):
         """
         result = self.predict_language_appropriateness(text, return_probabilities=True)
         
-        # Pesos para cada classe: quanto mais apropriado, maior o score
-        class_weights = {
-            'Nenhuma': 1.0,
-            'Leve': 0.5,
-            'Severa': 0.0
-        }
-        
+        # TODO: Customize este cálculo baseado em suas necessidades
+        # Exemplo: inverte a escala para que 1 seja nenhuma linguagem imprópria
         if 'probabilities' in result:
-            # Calcula score ponderado baseado nas probabilidades
-            score = sum(
-                result['probabilities'].get(label, 0) * weight 
-                for label, weight in class_weights.items()
-            )
+            # Calcula score invertido (quanto maior a classe, menor a adequação)
+            weights = [1.0, 0.7, 0.3, 0.0]  # Pesos invertidos para cada classe
+            score = sum(prob * weight for prob, weight in zip(result['probabilities'], weights))
             return min(max(score, 0.0), 1.0)  # Garante que está entre 0 e 1
         
         # Fallback: usa apenas a classe predita (invertida)
-        return 1.0 - (result['predicted_class'] / 2.0)
+        return 1.0 - (result['predicted_class'] / 3.0)
     
     def is_age_appropriate(self, text: str, min_age: int = 13) -> Dict[str, Any]:
         """

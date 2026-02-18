@@ -262,39 +262,29 @@ class BertimbauEducational(BertimbauBase):
         
         return results
     
-    def get_educational_score(self, text_or_result) -> float:
+    def get_educational_score(self, text: str) -> float:
         """
         Retorna um score de valor educacional entre 0 e 1.
         
+        TODO: Implemente um sistema de scoring personalizado
+        
         Args:
-            text_or_result: Texto para análise ou resultado de predict_educational_value
+            text: Texto para análise
             
         Returns:
-            Score educacional (0 = não educacional, 1 = educacional)
+            Score educacional (0 = não educacional, 1 = altamente educacional)
         """
-        # Se recebeu um dict, já é o resultado da predição
-        if isinstance(text_or_result, dict):
-            result = text_or_result
-        else:
-            result = self.predict_educational_value(text_or_result, return_probabilities=True)
+        result = self.predict_educational_value(text, return_probabilities=True)
         
-        # Pesos para cada classe: quanto mais educacional, maior o score
-        class_weights = {
-            'Não Educacional': 0.0,
-            'Parcialmente Educacional': 0.5,
-            'Educacional': 1.0
-        }
-        
+        # TODO: Customize este cálculo baseado em suas necessidades
         if 'probabilities' in result:
-            # Calcula score ponderado baseado nas probabilidades
-            score = sum(
-                result['probabilities'].get(label, 0) * weight 
-                for label, weight in class_weights.items()
-            )
+            # Calcula score ponderado (quanto maior a classe, maior o valor educacional)
+            weights = [0.0, 0.3, 0.7, 1.0]  # Pesos crescentes para cada classe
+            score = sum(prob * weight for prob, weight in zip(result['probabilities'], weights))
             return min(max(score, 0.0), 1.0)  # Garante que está entre 0 e 1
         
         # Fallback: usa apenas a classe predita
-        return result['predicted_class'] / 2.0
+        return result['predicted_class'] / 3.0
     
     def identify_educational_topics(self, text: str) -> Dict[str, Any]:
         """

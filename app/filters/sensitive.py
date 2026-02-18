@@ -1,5 +1,9 @@
 from typing import Dict, Any
 from .base import BaseFilter
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class SensitiveFilter(BaseFilter):
     """
@@ -21,7 +25,7 @@ class SensitiveFilter(BaseFilter):
             # TODO: Implementar lógica de classificação de conteúdo sensível
             return 0.5  # Score padrão
         except Exception as e:
-            print(f"Erro ao processar conteúdo sensível: {str(e)}")
+            logger.error(f"Erro ao processar conteúdo sensível: {str(e)}")
             return 0.0
             
     def get_filter_info(self):
@@ -42,4 +46,4 @@ class SensitiveFilter(BaseFilter):
                     {"value": "high", "label": "Alto conteúdo sensível"}
                 ]
             }
-        } 
+        }

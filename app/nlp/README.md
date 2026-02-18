@@ -88,31 +88,94 @@ app/nlp/
 1. Colete dados etiquetados para cada tarefa e salve como CSV ou Excel na pasta `datasets/`.
 2. Os datasets devem ter pelo menos duas colunas: texto e rótulo.
 
-### Treinamento dos Modelos
+### Treinamento dos Modelos — Grid Search com Cross-Validation
 
-Execute o script de treinamento para uma tarefa específica:
+O treinamento utiliza **Grid Search com K-Fold Cross-Validation** (K=5) para seleção de hiperparâmetros, com **oversampling no conjunto de treino** e **Focal Loss** para lidar com desbalanceamento de classes.
+
+#### ⭐ Modo Recomendado para o Artigo: `--mode optimized`
+
+O modo `optimized` utiliza **Successive Halving** (Jamieson & Talwalkar, 2016) em 2 estágios para reduzir drasticamente o tempo de treinamento sem perder rigor científico:
+
+| Estágio | Descrição | Configs | Folds | Épocas | Treinos |
+|---------|-----------|---------|-------|--------|---------|
+| 1 — Triagem | Avaliação rápida de todas as configurações | 12 | 2 | 3 (fixo) | 24 |
+| 2 — Avaliação | Validação completa das melhores configs | Top 6 | 5 | originais | 30 |
+| **Total** | | | | | **~54** |
 
 ```bash
-python -m app.nlp.training.train_model \
-    --task sentiment \
-    --data_path app/nlp/datasets/sentiment_data.csv \
-    --text_column text \
-    --label_column label \
-    --output_dir app/nlp/models \
-    --epochs 5 \
-    --batch_size 16
+# Recomendado para o artigo (~3-4 dias)
+python -m app.nlp.training.train_toxicity_gridsearch --mode optimized
 ```
 
-Parâmetros disponíveis:
-- `--task`: Tarefa a ser treinada (sentiment, toxicity, educational, language)
-- `--data_path`: Caminho para o arquivo de dados (CSV ou Excel)
-- `--text_column`: Nome da coluna que contém o texto
-- `--label_column`: Nome da coluna que contém os rótulos
-- `--output_dir`: Diretório para salvar o modelo treinado
-- `--epochs`: Número de épocas de treinamento
-- `--batch_size`: Tamanho do batch
-- `--learning_rate`: Taxa de aprendizado
-- `--max_length`: Tamanho máximo da sequência de tokens
+Grid de hiperparâmetros (baseado em Devlin et al., 2019):
+- **epochs**: [3, 5]
+- **batch_size**: [8, 16]
+- **learning_rate**: [2e-5, 3e-5, 5e-5]
+- **max_length**: [128]
+
+#### Modo de Validação Rápida: `--mode fast`
+
+Executa apenas 1 configuração × 5 folds para verificar se o pipeline funciona corretamente. Útil para testes antes de iniciar o treinamento completo.
+
+```bash
+# Validação rápida do pipeline (~4h)
+python -m app.nlp.training.train_toxicity_gridsearch --mode fast
+```
+
+#### Modo Completo: `--mode full`
+
+Grid Search exaustivo com 72 configurações × 5 folds = 360 treinos. **Não recomendado** — tempo estimado de ~56 dias.
+
+```bash
+# NÃO RECOMENDADO (uso excepcional)
+python -m app.nlp.training.train_toxicity_gridsearch --mode full
+```
+
+#### Opção de Pré-processamento
+
+Adicione `--preprocess` para aplicar limpeza de texto e lematização antes da tokenização do BERT:
+
+```bash
+python -m app.nlp.training.train_toxicity_gridsearch --mode optimized --preprocess
+```
+
+#### Saída do Treinamento
+
+Ao final do treinamento, o script:
+1. Salva os resultados detalhados em JSON em `evaluation/results/toxicity_gridsearch/`
+2. Treina automaticamente o **modelo final** com a melhor configuração encontrada
+3. Salva o modelo final em `models/trained/` para uso no `evaluate_toxicity.py`
+
+#### 🖥️ Execução no Servidor (Debian via SSH)
+
+Para rodar o treinamento em segundo plano e manter o processo ativo após fechar o SSH:
+
+```bash
+# Rodar em segundo plano com log (dentro da pasta brasnam-2026)
+nohup python -m app.nlp.training.train_toxicity_gridsearch --mode optimized > treinamento.log 2>&1 &
+```
+
+Comandos de monitoramento:
+
+```bash
+# Acompanhar o progresso em tempo real
+tail -f treinamento.log
+
+# Verificar se o processo ainda está rodando
+ps aux | grep train_toxicity
+
+# Parar o treinamento (se necessário)
+kill <PID>
+```
+
+Alternativa com `screen` (permite reconectar à sessão):
+
+```bash
+screen -S treinamento                                                    # Criar sessão
+python -m app.nlp.training.train_toxicity_gridsearch --mode optimized     # Executar
+# Ctrl+A, depois D → desanexar a sessão
+screen -r treinamento                                                    # Reconectar depois
+```
 
 ### Uso dos Modelos Treinados
 

@@ -1,5 +1,9 @@
 from typing import Dict, Any
 from .base import BaseFilter
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class DiversityFilter(BaseFilter):
     """
@@ -21,7 +25,7 @@ class DiversityFilter(BaseFilter):
             # TODO: Implementar lógica de classificação de diversidade
             return 0.5  # Score padrão
         except Exception as e:
-            print(f"Erro ao processar diversidade: {str(e)}")
+            logger.error(f"Erro ao processar diversidade: {str(e)}")
             return 0.0
             
     def get_filter_info(self):
@@ -42,4 +46,4 @@ class DiversityFilter(BaseFilter):
                     {"value": "high", "label": "Alta diversidade"}
                 ]
             }
-        } 
+        }

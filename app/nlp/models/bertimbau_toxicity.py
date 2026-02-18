@@ -14,8 +14,10 @@ INSTRUÇÕES PARA O ALUNO:
 import os
 import logging
 from typing import Dict, List, Any, Optional
+import numpy as np
+from sklearn.metrics import confusion_matrix
 from .bertimbau_base import BertimbauBase
-from ..config import get_task_config, get_training_config
+from ..config import get_task_config, get_training_config, PATHS
 from ..utils.data_utils import DataProcessor
 from ..utils.training_utils import TrainingHelper
 
@@ -25,11 +27,10 @@ class BertimbauToxicity(BertimbauBase):
     """
     Modelo BERTimbau especializado para Detecção de Toxicidade.
     
-    Este modelo classifica textos em 4 níveis de toxicidade:
-    - Não Tóxico (0)
-    - Levemente Tóxico (1)
-    - Moderadamente Tóxico (2)
-    - Altamente Tóxico (3)
+    Este modelo classifica textos em 3 níveis de toxicidade:
+    - Nenhuma (0)
+    - Leve (1)
+    - Severa (2)
     """
     
     def __init__(self, model_path: Optional[str] = None, device: Optional[str] = None):
@@ -103,35 +104,27 @@ class BertimbauToxicity(BertimbauBase):
         """
         Interpreta a classe predita em termos de toxicidade.
         
-        TODO: Implemente interpretações específicas para seu domínio
-        
         Args:
-            predicted_class: Classe predita (0-3)
+            predicted_class: Classe predita (0-2)
             
         Returns:
             Dict com interpretação da toxicidade
         """
         interpretations = {
             0: {
-                'toxicity_level': 'Não Tóxico',
+                'toxicity_level': 'Nenhuma',
                 'description': 'Conteúdo apropriado e seguro para todas as idades',
                 'recommendation': 'Permitir conteúdo',
                 'severity': 'low'
             },
             1: {
-                'toxicity_level': 'Levemente Tóxico',
+                'toxicity_level': 'Leve',
                 'description': 'Conteúdo com linguagem inadequada leve',
                 'recommendation': 'Revisar conteúdo',
                 'severity': 'medium'
             },
             2: {
-                'toxicity_level': 'Moderadamente Tóxico',
-                'description': 'Conteúdo com linguagem ofensiva moderada',
-                'recommendation': 'Bloquear para crianças',
-                'severity': 'high'
-            },
-            3: {
-                'toxicity_level': 'Altamente Tóxico',
+                'toxicity_level': 'Severa',
                 'description': 'Conteúdo altamente ofensivo e inadequado',
                 'recommendation': 'Bloquear conteúdo',
                 'severity': 'critical'
@@ -152,7 +145,9 @@ class BertimbauToxicity(BertimbauBase):
         val_texts: List[str],
         val_labels: List[int],
         config_name: str = 'default',
-        experiment_name: Optional[str] = None
+        experiment_name: Optional[str] = None,
+        save_artifacts: bool = True,
+        **kwargs
     ) -> Dict[str, Any]:
         """
         Treina o modelo de detecção de toxicidade.
@@ -166,17 +161,35 @@ class BertimbauToxicity(BertimbauBase):
             val_labels: Labels de validação
             config_name: Nome da configuração de treinamento
             experiment_name: Nome do experimento
+            **kwargs: Hiperparâmetros para sobrescrever a configuração padrão (ex: learning_rate, num_train_epochs)
             
         Returns:
             Dict com resultados do treinamento
         """
         logger.info("Iniciando treinamento do modelo de Detecção de Toxicidade")
         
-        # Cria helper de treinamento
         training_helper = TrainingHelper(
             task_name=self.task_name,
-            model_name=self.model_config['base_model']
+            model_name=self.model_config['base_model'],
+            output_base_dir=os.path.join(PATHS['models_dir'], 'trained')
         )
+        
+        # Configurações de treinamento
+        training_config = get_training_config(config_name)
+        
+        if kwargs:
+            logger.info(f"Sobrescrevendo configuração padrão com: {kwargs}")
+            training_config.update(kwargs)
+            
+            if 'max_length' in kwargs:
+                self.max_length = kwargs['max_length']
+        # Desativa salvamentos automáticos (checkpoints) sempre; salvamos manualmente só no final
+        training_config.update({
+            'save_strategy': 'no',
+            'load_best_model_at_end': False
+        })
+                
+        output_dir = training_helper.get_output_dir(experiment_name)
         
         # TODO: Aplique pré-processamento específico nos dados de treino
         # train_texts = [self.preprocess_for_toxicity(text) for text in train_texts]
@@ -194,21 +207,31 @@ class BertimbauToxicity(BertimbauBase):
             max_length=self.max_length
         )
         
-        # Configurações de treinamento
-        training_config = get_training_config(config_name)
-        output_dir = training_helper.get_output_dir(experiment_name)
+        # Remove parâmetros não aceitos por get_training_args
+        # Adicione aqui qualquer outro parâmetro que esteja no config mas não em get_training_args
+        ignored_keys = ['early_stopping_patience', 'seed', 'max_length', 'task', 'model_name', 'loss_type', 'focal_gamma', 'label_smoothing', 'class_weights']
+        training_config_filtered = {k: v for k, v in training_config.items() 
+                                    if k not in ignored_keys}
         
         training_args = training_helper.get_training_args(
             output_dir=output_dir,
-            **training_config
+            **training_config_filtered
         )
         
         # Treina o modelo
+        # Parâmetros de perda avançada
+        loss_type = kwargs.pop('loss_type', 'focal')
+        focal_gamma = float(kwargs.pop('focal_gamma', 2.0))
+        label_smoothing = float(kwargs.pop('label_smoothing', 0.0))
         model, trainer = training_helper.train_model(
             train_dataset=train_dataset,
             val_dataset=val_dataset,
             num_labels=self.num_labels,
-            training_args=training_args
+            training_args=training_args,
+            loss_type=loss_type,
+            focal_gamma=focal_gamma,
+            label_smoothing=label_smoothing,
+            class_weights=None
         )
         
         # Atualiza o modelo atual
@@ -217,18 +240,28 @@ class BertimbauToxicity(BertimbauBase):
         # Avalia no conjunto de validação
         eval_results = trainer.evaluate()
         
-        # Salva o modelo
-        training_helper.save_model_with_metadata(
-            model=model,
-            tokenizer=self.tokenizer,
-            output_dir=output_dir,
-            training_args=training_args,
-            metrics=eval_results,
-            additional_info={
-                'task_specific_info': 'Modelo treinado para detecção de toxicidade',
-                'preprocessing_applied': 'TODO: Descrever pré-processamentos aplicados'
-            }
-        )
+        # Gera predições para matriz de confusão
+        logger.info("Gerando predições para matriz de confusão...")
+        predictions = trainer.predict(val_dataset)
+        preds = np.argmax(predictions.predictions, axis=1)
+        labels = predictions.label_ids
+        
+        # Calcula matriz de confusão
+        cm = confusion_matrix(labels, preds)
+        eval_results['confusion_matrix'] = cm.tolist() # Converte para lista para serialização JSON
+        
+        if save_artifacts:
+            training_helper.save_model_with_metadata(
+                model=model,
+                tokenizer=self.tokenizer,
+                output_dir=output_dir,
+                training_args=training_args,
+                metrics=eval_results,
+                additional_info={
+                    'task_specific_info': 'Modelo treinado para detecção de toxicidade',
+                    'preprocessing_applied': 'TODO: Descrever pré-processamentos aplicados'
+                }
+            )
         
         logger.info(f"Treinamento concluído. Modelo salvo em {output_dir}")
         
@@ -269,6 +302,8 @@ class BertimbauToxicity(BertimbauBase):
         """
         Retorna um score de toxicidade entre 0 e 1.
         
+        TODO: Implemente um sistema de scoring personalizado
+        
         Args:
             text: Texto para análise
             
@@ -277,24 +312,24 @@ class BertimbauToxicity(BertimbauBase):
         """
         result = self.predict_toxicity(text, return_probabilities=True)
         
-        # Pesos para cada classe: quanto maior a classe, maior a toxicidade
-        class_weights = {
-            'Não Tóxico': 0.0,
-            'Levemente Tóxico': 0.3,
-            'Moderadamente Tóxico': 0.7,
-            'Altamente Tóxico': 1.0
-        }
-        
+        # TODO: Customize este cálculo baseado em suas necessidades
+        # Exemplo simples: usa a probabilidade da classe mais alta
         if 'probabilities' in result:
-            # Calcula score ponderado baseado nas probabilidades
-            score = sum(
-                result['probabilities'].get(label, 0) * weight 
-                for label, weight in class_weights.items()
-            )
-            return min(max(score, 0.0), 1.0)  # Garante que está entre 0 e 1
+            weights_by_class = {
+                'Nenhuma': 0.0,
+                'Leve': 0.5,
+                'Severa': 1.0
+            }
+            probs = result['probabilities']
+            if isinstance(probs, dict):
+                score = sum(probs.get(cls, 0.0) * weights_by_class.get(cls, 0.0) for cls in self.class_names)
+            else:
+                weights = [weights_by_class.get(cls, 0.0) for cls in self.class_names]
+                score = sum(prob * weight for prob, weight in zip(probs, weights))
+            return min(max(score, 0.0), 1.0)
         
         # Fallback: usa apenas a classe predita
-        return result['predicted_class'] / 3.0
+        return result['predicted_class'] / 2.0
     
     # TODO: Implemente métodos auxiliares conforme necessário
     def _normalize_masked_profanity(self, text: str) -> str:

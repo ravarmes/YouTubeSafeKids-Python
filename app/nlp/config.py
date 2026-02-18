@@ -15,7 +15,9 @@ PATHS = {
     'models_dir': os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'nlp', 'models'),
     'evaluation_dir': os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'nlp', 'evaluation', 'results'),
     'logs_dir': os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'nlp', 'logs'),
-    'corpus_file': os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'nlp', 'datasets', 'corpus.csv')
+    'corpus_file': os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'nlp', 'datasets', 'corpus.csv'),
+    'corpus_toxicidade': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'corpus_toxicidade.csv'),
+    'corpus_sentimento': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'corpus_analise_sentimentos.csv')
 }
 
 # Configurações das tarefas
@@ -30,9 +32,9 @@ TASKS = {
     },
     'TOX': {
         'name': 'Toxicidade',
-        'column': 'TOX',
-        'classes': ['Não Tóxico', 'Levemente Tóxico', 'Moderadamente Tóxico', 'Altamente Tóxico'],
-        'num_labels': 4,
+        'column': 'Tox',
+        'classes': ['Nenhuma', 'Leve', 'Severa'],
+        'num_labels': 3,
         'model_file': 'bertimbau_toxicity.py',
         'filter_file': 'toxicity.py'
     },
@@ -115,6 +117,40 @@ TRAINING_CONFIG = {
         'metric_for_best_model': 'eval_f1',
         'greater_is_better': True,
         'early_stopping_patience': 5,
+        'seed': 42
+    },
+    'AS_best': {
+        'num_train_epochs': 5,
+        'per_device_train_batch_size': 8,
+        'per_device_eval_batch_size': 8,
+        'learning_rate': 5e-5,
+        'warmup_steps': 500,
+        'weight_decay': 0.01,
+        'logging_steps': 10,
+        'eval_steps': 500,
+        'save_steps': 500,
+        'evaluation_strategy': 'steps',
+        'save_strategy': 'steps',
+        'load_best_model_at_end': True,
+        'metric_for_best_model': 'eval_f1',
+        'greater_is_better': True,
+        'seed': 42
+    },
+    'TOX_best': {
+        'num_train_epochs': 5,
+        'per_device_train_batch_size': 8,
+        'per_device_eval_batch_size': 8,
+        'learning_rate': 5e-5,
+        'warmup_steps': 500,
+        'weight_decay': 0.01,
+        'logging_steps': 10,
+        'eval_steps': 500,
+        'save_steps': 500,
+        'evaluation_strategy': 'steps',
+        'save_strategy': 'steps',
+        'load_best_model_at_end': True,
+        'metric_for_best_model': 'eval_f1',
+        'greater_is_better': True,
         'seed': 42
     }
 }

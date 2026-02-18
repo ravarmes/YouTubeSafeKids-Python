@@ -14,8 +14,9 @@ from typing import Dict, List, Any, Optional, Tuple
 from sklearn.metrics import (
     accuracy_score, precision_recall_fscore_support,
     confusion_matrix, classification_report,
-    roc_auc_score, roc_curve
+    roc_auc_score, roc_curve, auc
 )
+from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
 import seaborn as sns
 from transformers import BertForSequenceClassification, BertTokenizer
@@ -143,15 +144,15 @@ class ModelEvaluator:
         
         # Precision, Recall, F1
         precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(
-            true_labels, predictions, average='macro'
+            true_labels, predictions, average='macro', zero_division=0
         )
         precision_weighted, recall_weighted, f1_weighted, _ = precision_recall_fscore_support(
-            true_labels, predictions, average='weighted'
+            true_labels, predictions, average='weighted', zero_division=0
         )
         
         # Por classe
         precision_per_class, recall_per_class, f1_per_class, support_per_class = precision_recall_fscore_support(
-            true_labels, predictions, average=None
+            true_labels, predictions, average=None, zero_division=0
         )
         
         # Matriz de confusão
@@ -276,6 +277,10 @@ class ModelEvaluator:
                 for j in range(len(self.class_names)):
                     f.write(f"{cm[i][j]:>8}")
                 f.write("\n")
+            
+            # Análise de Erros (Top 10 com maior confiança errada)
+            if 'probabilities' in metrics and 'true_labels' in metrics:
+                self._write_error_analysis(f, metrics)
         
         # Salva métricas em JSON
         json_file = os.path.join(
@@ -347,8 +352,99 @@ class ModelEvaluator:
             
             logger.info(f"Gráficos salvos em {self.output_dir}")
             
+            logger.info(f"Gráficos salvos em {self.output_dir}")
+
+            # ROC Curve
+            if 'probabilities' in metrics and 'true_labels' in metrics:
+                self._save_roc_curve(metrics, timestamp)
+            
         except Exception as e:
             logger.warning(f"Erro ao salvar gráficos: {e}")
+
+    def _save_roc_curve(self, metrics: Dict[str, Any], timestamp: str):
+        """Salva a curva ROC multiclasse."""
+        try:
+            plt.figure(figsize=(10, 8))
+            
+            # Binariza labels para One-vs-Rest
+            n_classes = len(self.class_names)
+            y_test_bin = label_binarize(metrics['true_labels'], classes=range(n_classes))
+            y_score = np.array(metrics['probabilities'])
+            
+            # Compute ROC curve and ROC area for each class
+            fpr = dict()
+            tpr = dict()
+            roc_auc = dict()
+            
+            # Cores para plot (suporta até 3 classes, expandir se necessário)
+            colors = ['blue', 'red', 'green', 'orange', 'purple'][:n_classes]
+            
+            for i in range(n_classes):
+                # Se só tiver uma classe presente no teste (edge case), roc_curve falha sem check
+                if len(np.unique(y_test_bin[:, i])) > 1:
+                    fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], y_score[:, i])
+                    roc_auc[i] = auc(fpr[i], tpr[i])
+                    
+                    plt.plot(fpr[i], tpr[i], color=colors[i], lw=2,
+                            label=f'ROC curve {self.class_names[i]} (area = {roc_auc[i]:0.3f})')
+            
+            plt.plot([0, 1], [0, 1], 'k--', lw=2)
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title(f'ROC Curve (Multiclass) - {self.task_name.upper()}')
+            plt.legend(loc="lower right")
+            
+            plot_file = os.path.join(
+                self.output_dir,
+                f"roc_curve_{self.task_name}_{timestamp}.png"
+            )
+            plt.savefig(plot_file, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+        except Exception as e:
+            logger.warning(f"Erro ao salvar curva ROC: {e}")
+
+    def _write_error_analysis(self, f, metrics):
+        """Escreve análise de erros no relatório."""
+        f.write("\nANÁLISE DE ERROS (Top 10 Maior Confiança Errada)\n")
+        f.write("-" * 40 + "\n")
+        
+        preds = np.array(metrics['predictions'])
+        probs = np.array(metrics['probabilities'])
+        true = np.array(metrics['true_labels'])
+        
+        # Identifica índices onde houve erro
+        error_indices = np.where(preds != true)[0]
+        
+        if len(error_indices) == 0:
+            f.write("Parabéns! O modelo não cometeu erros no conjunto de teste.\n")
+            return
+
+        # Coleta infos dos erros
+        errors = []
+        for idx in error_indices:
+            pred_class = preds[idx]
+            true_class = true[idx]
+            confidence = probs[idx][pred_class]
+            errors.append({
+                'id': idx,
+                'true': self.class_names[true_class],
+                'pred': self.class_names[pred_class],
+                'conf': confidence
+            })
+            
+        # Ordena por confiança decrescente (erros mais "convictos")
+        errors.sort(key=lambda x: x['conf'], reverse=True)
+        
+        f.write(f"{'True':<10} | {'Pred':<10} | {'Conf':<8}\n")
+        f.write("-" * 35 + "\n")
+        
+        for err in errors[:10]:
+            f.write(f"{err['true']:<10} | {err['pred']:<10} | {err['conf']:.4f}\n")
+            
+        f.write(f"\nTotal de erros: {len(errors)} de {len(true)} amostras.\n")
     
     def compare_models(
         self,

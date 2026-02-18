@@ -1,5 +1,9 @@
 from typing import Dict, Any
 from .base import BaseFilter
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class AgeRatingFilter(BaseFilter):
     """
@@ -7,7 +11,7 @@ class AgeRatingFilter(BaseFilter):
     """
     
     def __init__(self):
-        print("AgeRatingFilter :: __init__()")
+        logger.info("AgeRatingFilter :: __init__()")
         super().__init__(
             name="Faixa Etária",
             description="Filtra por faixa etária recomendada",
@@ -15,7 +19,7 @@ class AgeRatingFilter(BaseFilter):
         )
         
     def process(self, video):
-        print("AgeRatingFilter :: process()")
+        logger.info("AgeRatingFilter :: process()")
         """
         Processa a faixa etária do vídeo e retorna um score.
         """
@@ -23,11 +27,11 @@ class AgeRatingFilter(BaseFilter):
             # TODO: Implementar lógica de classificação por faixa etária
             return 0.5  # Score padrão
         except Exception as e:
-            print(f"Erro ao processar faixa etária: {str(e)}")
+            logger.error(f"Erro ao processar faixa etária: {str(e)}")
             return 0.0
             
     def get_filter_info(self):
-        print("AgeRatingFilter :: get_filter_info()")
+        logger.info("AgeRatingFilter :: get_filter_info()")
         """
         Retorna informações sobre o filtro.
         """
@@ -44,4 +48,4 @@ class AgeRatingFilter(BaseFilter):
                     {"value": "13-17", "label": "13 a 17 anos"}
                 ]
             }
-        } 
+        }
