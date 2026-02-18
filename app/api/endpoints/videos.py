@@ -74,9 +74,16 @@ async def search_videos(
                 video_duration = duration_info['type']
                 logger.info(f"Usando filtro de duração: {video_duration}")
         
+        # Identifica filtros de PLN habilitados
+        nlp_filter_names = ["Análise de Sentimentos", "Detecção de Toxicidade", "Classificação Educacional", "Detecção de Linguagem Imprópria"]
+        nlp_filters_enabled = [filter_name for filter_name in nlp_filter_names if filter_name in filter_weights_dict]
+        
+        if nlp_filters_enabled:
+            logger.info(f"Filtros de PLN detectados: {nlp_filters_enabled}")
+        
         # Busca vídeos no YouTube
         logger.info(f"Buscando vídeos no YouTube para o termo '{query}'...")
-        videos = await youtube_api.search_videos(query, video_duration=video_duration)
+        videos = await youtube_api.search_videos(query, video_duration=video_duration, nlp_filters_enabled=nlp_filters_enabled)
         logger.info(f"API do YouTube retornou {len(videos)} vídeos")
         
         if not videos:
@@ -146,4 +153,4 @@ async def search_videos(
 async def get_filters() -> List[Dict[str, Any]]:
     """Get information about all available filters."""
     logger.info("Obtendo informações dos filtros")
-    return filter_manager.get_filter_info() 
+    return filter_manager.get_filter_info()

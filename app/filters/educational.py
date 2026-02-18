@@ -1,93 +1,105 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
 from .base import BaseFilter
+from ..nlp.models.bertimbau_educational import BertimbauEducational
 from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 class EducationalFilter(BaseFilter):
     """
-    Filtro para classificar vídeos por conteúdo educacional.
+    Filtro de conteúdo educacional usando modelo BERTimbau especializado.
     """
     
-    def __init__(self):
-        print("EducationalFilter :: __init__()")
+    def __init__(self, model_path: str = None):
         super().__init__(
-            name="Educacional",
-            description="Filtra por conteúdo educacional",
-            default_enabled=True
+            name="Tópicos Educacionais",
+            description="Identifica e avalia conteúdo educacional e adequação por idade"
         )
-        self.name = "Educacional"
-        self.description = "Filtra por conteúdo educacional"
-        self.vectorizer = TfidfVectorizer(stop_words='english')
         
-        # Categorias educacionais e seus termos relacionados
-        self.categories = {
-            "ciências": ["física", "química", "biologia", "ciência", "experimento", "laboratório",
-                        "natureza", "planeta", "animal", "planta", "corpo", "saúde"],
-            "história": ["história", "passado", "civilização", "guerra", "revolução", "império",
-                        "cultura", "sociedade", "país", "mundo", "descoberta"],
-            "matemática": ["matemática", "número", "conta", "geometria", "álgebra", "cálculo",
-                          "soma", "subtração", "multiplicação", "divisão", "forma"],
-            "artes": ["arte", "música", "pintura", "desenho", "teatro", "dança", "criatividade",
-                     "imaginação", "cor", "som", "instrumento"],
-            "linguagem": ["português", "palavra", "letra", "gramática", "leitura", "escrita",
-                         "história", "livro", "poesia", "comunicação", "expressão"],
-            "tecnologia": ["computador", "internet", "programação", "robô", "tecnologia",
-                          "digital", "aplicativo", "software", "inovação", "futuro"],
-            "cidadania": ["cidadania", "direito", "dever", "respeito", "sociedade",
-                         "comunidade", "cooperação", "ajuda", "amizade", "família"]
-        }
+        try:
+            self.model = BertimbauEducational(model_path)
+            logger.info("Modelo BERTimbau educacional carregado com sucesso")
+        except Exception as e:
+            logger.error(f"Erro ao carregar modelo educacional: {e}")
+            self.model = None
         
     def process(self, video_data: Dict[str, Any]) -> float:
-        print("EducationalFilter :: process()")
         """
-        Processa o vídeo e retorna uma pontuação entre 0 e 1.
-        1 = mais educacional, 0 = menos educacional
-        """
-        text = f"{video_data.get('title', '')} {video_data.get('description', '')} {video_data.get('transcript', '')}"
-        if not text.strip():
-            return 0.0
+        Processa o vídeo para avaliar conteúdo educacional.
+        
+        Args:
+            video_data: Dados do vídeo incluindo título, descrição e transcrição
             
+        Returns:
+            float: Score de 0 a 1 (0 = não educacional, 1 = muito educacional)
+        """
+        if not self.model:
+            logger.warning("Modelo educacional não disponível")
+            return 0.5  # Retorna neutro se modelo não estiver disponível
+        
+        # Combina título, descrição e transcrição
+        text_parts = []
+        if video_data.get('title'):
+            text_parts.append(video_data['title'])
+        if video_data.get('description'):
+            text_parts.append(video_data['description'])
+        if video_data.get('transcript'):
+            text_parts.append(video_data['transcript'])
+        
+        if not text_parts:
+            return 0.0  # Se não há texto, considera não educacional
+        
+        combined_text = ' '.join(text_parts)
+        
         try:
-            # Calcula TF-IDF do texto
-            tfidf_matrix = self.vectorizer.fit_transform([text])
-            feature_names = self.vectorizer.get_feature_names_out()
+            # Usa o modelo para predizer valor educacional
+            result = self.model.predict_educational_value(combined_text)
             
-            # Conta quantos termos educacionais foram encontrados
-            educational_terms = 0
-            total_categories = len(self.categories)
-            categories_found = set()
+            # Obtém o score educacional (já normalizado entre 0 e 1)
+            score = self.model.get_educational_score(result)
             
-            for word in feature_names:
-                for category, terms in self.categories.items():
-                    if word in terms:
-                        educational_terms += 1
-                        categories_found.add(category)
-                        
-            # Calcula o score baseado na quantidade de termos e categorias encontradas
-            term_score = min(1.0, educational_terms / 10)  # Normaliza para máximo de 10 termos
-            category_score = len(categories_found) / total_categories
+            # Verifica adequação por idade se especificada
+            age_group = video_data.get('target_age_group')
+            if age_group:
+                is_suitable = self.model.is_suitable_for_age_group(combined_text, age_group)
+                if not is_suitable:
+                    score *= 0.7  # Reduz score se não for adequado para a idade
             
-            # Média ponderada: 60% termos, 40% categorias
-            final_score = (0.6 * term_score) + (0.4 * category_score)
-            return final_score
+            return score
             
         except Exception as e:
-            print(f"Erro ao processar texto educacional: {e}")
-            return 0.0
+            logger.error(f"Erro ao processar conteúdo educacional: {e}")
+            return 0.5  # Retorna neutro em caso de erro
 
     def get_filter_info(self) -> Dict[str, Any]:
-        print("EducationalFilter :: get_filter_info()")
+        """
+        Retorna informações sobre o filtro educacional.
+        """
         return {
             "name": self.name,
             "description": self.description,
             "enabled": self.enabled,
-            "type": "educational",
-            "default_value": 100,
+            "weight": self.weight,
+            "model_info": self.model.get_model_info() if self.model else "Modelo não carregado",
             "options": {
-                "educational_levels": [
-                    {"value": "all", "label": "Todos os níveis"},
-                    {"value": "basic", "label": "Básico"},
-                    {"value": "intermediate", "label": "Intermediário"},
-                    {"value": "advanced", "label": "Avançado"}
-                ]
+                "educational_threshold": {
+                    "type": "slider",
+                    "min": 0.0,
+                    "max": 1.0,
+                    "default": 1.0,
+                    "step": 0.1,
+                    "description": "Limiar de conteúdo educacional (0.0=pouco restritivo, 1.0=muito restritivo)"
+                },
+                "age_group": {
+                    "type": "select",
+                    "options": [
+                        {"value": "3-6", "label": "3-6 anos (Pré-escolar)"},
+                        {"value": "7-10", "label": "7-10 anos (Fundamental I)"},
+                        {"value": "11-14", "label": "11-14 anos (Fundamental II)"},
+                        {"value": "15-18", "label": "15-18 anos (Ensino Médio)"}
+                    ],
+                    "default": "7-10",
+                    "description": "Faixa etária alvo para adequação do conteúdo"
+                }
             }
-        } 
+        }

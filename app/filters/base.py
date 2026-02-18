@@ -52,29 +52,24 @@ class BaseFilter(ABC):
         pass
         
     def is_enabled(self) -> bool:
-        logger.info(f"{self.__class__.__name__} :: def is_enabled")
         """Check if the filter is enabled."""
         return self.enabled
     
     def set_enabled(self, enabled: bool) -> None:
-        logger.info(f"{self.__class__.__name__} :: def set_enabled")
         """Enable or disable the filter."""
         self.enabled = enabled
-        self.logger.info(f"{self.name} filter {'enabled' if enabled else 'disabled'}")
+        self.logger.debug(f"{self.name} filter {'enabled' if enabled else 'disabled'}")
     
     def get_weight(self) -> float:
-        logger.info(f"{self.__class__.__name__} :: def get_weight")
         """Get the filter's weight."""
         return self.weight
     
     def set_weight(self, weight: float) -> None:
-        logger.info(f"{self.__class__.__name__} :: def set_weight")
         """Set the filter's weight."""
         self.weight = weight
-        self.logger.info(f"{self.name} filter weight set to {weight}")
+        self.logger.debug(f"{self.name} filter weight set to {weight}")
     
     def validate_video(self, video: Dict[str, Any]) -> bool:
-        logger.info(f"{self.__class__.__name__} :: def validate_video")
         """
         Validate if a video has all required fields.
         
